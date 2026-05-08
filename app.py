@@ -1,4 +1,39 @@
 import streamlit as st
+import streamlit_authenticator as stauth
+
+st.set_page_config(page_title="DCFarma Contabilidad", page_icon="💊", layout="wide")
+
+credentials = {
+    "usernames": {
+        "Admin": {
+            "name": "Admin",
+            "password": "$2b$12$r6pUhTvteq.ZO7G0cYNg/O3g1plgKuSrswLKveuKFyKxVyJITsEK6"
+        }
+    }
+}
+
+authenticator = stauth.Authenticate(
+    credentials,
+    "dcfarma_cookie",
+    "dcfarma_key_xyz_2026",
+    cookie_expiry_days=30
+)
+
+login_result = authenticator.login("main")
+if login_result:
+    name, authentication_status, username = login_result
+else:
+    name, authentication_status, username = None, None, None
+
+if authentication_status is False:
+    st.error("Usuario o contraseña incorrectos")
+    st.stop()
+elif authentication_status is None:
+    st.info("Introduce tu usuario y contraseña para acceder")
+    st.stop()
+
+authenticator.logout("sidebar")
+
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
@@ -7,7 +42,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from data_loader import (load_compras, load_gastos, load_ingresos_servicios,
                          load_ingresos_alliance, load_banco)
 
-st.set_page_config(page_title="DCFarma Contabilidad", page_icon="💊", layout="wide")
 
 @st.cache_data(ttl=300)
 def get_all_data():
