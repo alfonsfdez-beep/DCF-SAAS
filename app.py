@@ -1,44 +1,31 @@
 import streamlit as st
-import streamlit_authenticator as stauth
 
 st.set_page_config(page_title="DCFarma Contabilidad", page_icon="💊", layout="wide")
 
-credentials = {
-    "usernames": {
-        "Admin": {
-            "name": "Admin",
-            "password": "$2b$12$r6pUhTvteq.ZO7G0cYNg/O3g1plgKuSrswLKveuKFyKxVyJITsEK6"
-        }
-    }
-}
+USERS = {"Admin": "12341234Aa$$"}
 
-authenticator = stauth.Authenticate(
-    credentials,
-    "dcfarma_cookie",
-    "dcfarma_key_xyz_2026",
-    cookie_expiry_days=30
-)
+def check_login():
+    if st.session_state.get("authenticated"):
+        return True
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        st.markdown("## 🔐 DCFarma")
+        with st.form("login_form"):
+            user = st.text_input("Usuario")
+            pwd = st.text_input("Contraseña", type="password")
+            submitted = st.form_submit_button("Entrar", use_container_width=True)
+            if submitted:
+                if user in USERS and USERS[user] == pwd:
+                    st.session_state["authenticated"] = True
+                    st.session_state["username"] = user
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
+    return False
 
-login_result = authenticator.login("main")
-if login_result:
-    name, authentication_status, username = login_result
-else:
-    name, authentication_status, username = None, None, None
-
-if authentication_status is False:
-    st.error("Usuario o contraseña incorrectos")
-    st.stop()
-elif authentication_status is None:
-    st.info("Introduce tu usuario y contraseña para acceder")
+if not check_login():
     st.stop()
 
-authenticator.logout("sidebar")
-
-import pandas as pd
-import plotly.graph_objects as go
-from datetime import datetime
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from data_loader import (load_compras, load_gastos, load_ingresos_servicios,
                          load_ingresos_alliance, load_banco)
 
