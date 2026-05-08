@@ -1,30 +1,28 @@
 import streamlit as st
 
-
 USERS = {"Admin": "12341234Aa$$"}
 
-def check_login():
-    if st.session_state.get("authenticated"):
-        return True
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.markdown("## 🔐 DCFarma")
-        with st.form("login_form"):
-            user = st.text_input("Usuario")
-            pwd = st.text_input("Contraseña", type="password")
-            submitted = st.form_submit_button("Entrar", use_container_width=True)
-            if submitted:
-                if user in USERS and USERS[user] == pwd:
-                    st.session_state["authenticated"] = True
-                    st.session_state["username"] = user
-                    st.rerun()
-                else:
-                    st.error("Usuario o contraseña incorrectos")
-    return False
-
-if not check_login():
+if not st.session_state.get("authenticated"):
+    st.set_page_config(page_title="DCFarma - Acceso", page_icon="💊", layout="centered")
+    st.markdown("## 🔐 DCFarma")
+    with st.form("login_form"):
+        user = st.text_input("Usuario")
+        pwd = st.text_input("Contraseña", type="password")
+        ok = st.form_submit_button("Entrar", use_container_width=True)
+        if ok:
+            if user in USERS and USERS[user] == pwd:
+                st.session_state["authenticated"] = True
+                st.session_state["username"] = user
+                st.rerun()
+            else:
+                st.error("Usuario o contraseña incorrectos")
     st.stop()
 
+import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from data_loader import (load_compras, load_gastos, load_ingresos_servicios,
                          load_ingresos_alliance, load_banco)
 
@@ -419,33 +417,6 @@ elif vista == "📅 Forecast":
         # Línea vertical hoy (usando timestamp en ms para Plotly)
         import datetime as _dt2
         hoy_ts = _dt2.datetime.combine(hoy_fc, _dt2.time()).timestamp() * 1000
-
-st.set_page_config(page_title='DCFarma Contabilidad', page_icon='💊', layout='wide')
-
-USERS = {'Admin': '12341234Aa$$'}
-
-def check_login():
-    if st.session_state.get('authenticated'):
-        return True
-    col1, col2, col3 = st.columns([1,1,1])
-    with col2:
-        st.markdown('## 🔐 DCFarma')
-        with st.form('login_form'):
-            user = st.text_input('Usuario')
-            pwd = st.text_input('Contraseña', type='password')
-            ok = st.form_submit_button('Entrar', use_container_width=True)
-            if ok:
-                if user in USERS and USERS[user] == pwd:
-                    st.session_state['authenticated'] = True
-                    st.session_state['username'] = user
-                    st.rerun()
-                else:
-                    st.error('Usuario o contraseña incorrectos')
-    return False
-
-if not check_login():
-    st.stop()
-
         fig.add_vline(x=hoy_ts, line_dash="dash", line_color="#95a5a6", line_width=1,
                       annotation_text="Hoy", annotation_position="top right")
 
