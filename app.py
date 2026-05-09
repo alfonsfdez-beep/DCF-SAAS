@@ -1,9 +1,38 @@
 import streamlit as st
-import os
+import os, re
 
 st.set_page_config(page_title="DCFarma · Contabilidad", page_icon="💊", layout="wide")
 
 LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+
+# ── Iconos Bootstrap para cada KPI ───────────────────────────────────────────
+_KPI_ICONS = {
+    "ingresos totales":       "coin",
+    "compras":                "cart3",
+    "gastos":                 "receipt",
+    "resultado":              "graph-up-arrow",
+    "ingresos servicios":     "cash-coin",
+    "ingresos alliance":      "people-fill",
+    "total gastos":           "calculator",
+    "saldo banco":            "bank",
+    "saldo banco hoy":        "bank",
+    "saldo actual":           "bank",
+    "personal":               "person-workspace",
+    "total base imponible":   "file-earmark-text",
+    "cobros pendientes":      "arrow-down-circle-fill",
+    "pagos pendientes":       "arrow-up-circle-fill",
+    "saldo estimado 60d":     "graph-up",
+    "total cobros filtrados": "arrow-down-circle",
+    "total pagos filtrados":  "arrow-up-circle",
+    "neto filtrado":          "calculator",
+}
+
+def _kpi_icon(label):
+    key = re.sub(r'[^\w\s]', '', label).lower().strip()
+    return _KPI_ICONS.get(key, "bar-chart-fill")
+
+def _kpi_label(label):
+    return re.sub(r'^[^\w\s]+\s*', '', label).strip().upper()
 
 CSS = """
 <style>
@@ -17,34 +46,37 @@ CSS = """
 }
 [data-testid="stSidebar"] hr {border-color: #c8e8e6;}
 
-/* ── option_menu tweak: left border en activo ─────────── */
+/* ── option_menu: left border en activo ───────────────── */
 [data-testid="stSidebar"] .nav-link-selected {
     border-left: 3px solid #4AADA8 !important;
 }
 
-/* ── Metric cards (st.metric nativo) ─────────────────── */
-[data-testid="stMetric"] {
-    background: #ffffff;
+/* ── KPI cards HTML ──────────────────────────────────── */
+.kpi-card {
+    background: #fff;
     border-radius: 10px;
-    padding: 1rem 1.2rem 0.9rem !important;
+    padding: 1rem 1.2rem 0.9rem;
     box-shadow: 0 1px 8px rgba(74,173,168,0.12);
     border-top: 3px solid #4AADA8;
+    min-height: 90px;
 }
-[data-testid="stMetricLabel"] > div {
-    font-size: 0.70rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.05em;
+.kpi-label {
+    display: block;
+    font-size: 0.70rem;
+    font-weight: 700;
     text-transform: uppercase;
-    color: #7a9ea0 !important;
+    letter-spacing: 0.05em;
+    color: #7a9ea0;
+    margin-bottom: 0.35rem;
 }
-[data-testid="stMetricValue"] > div {
-    font-size: 1.5rem !important;
-    font-weight: 700 !important;
-    color: #1a3a3a !important;
+.kpi-label i { margin-right: 4px; }
+.kpi-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a3a3a;
 }
-[data-testid="stMetricDelta"] svg {display: none;}
-[data-testid="stMetricDelta"] > div {font-size: 0.78rem !important;}
-
+.kpi-delta { display: block; font-size: 0.78rem; margin-top: 0.2rem; }
 
 /* ── General ─────────────────────────────────────────── */
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
@@ -52,26 +84,74 @@ h1, h2, h3 {color: #1a3a3a;}
 </style>
 """
 
+LOGIN_CSS = """
+<style>
+#MainMenu, footer, header {visibility: hidden;}
+.stApp {
+    background: linear-gradient(150deg, #d4eeec 0%, #eaf5f5 35%, #f8fffe 70%, #edf6f5 100%);
+}
+[data-testid="stForm"] {
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 1.8rem 1.6rem !important;
+    box-shadow: 0 8px 40px rgba(74,173,168,0.18);
+    border-top: 4px solid #4AADA8;
+}
+[data-testid="stForm"] button {
+    background: #4AADA8 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    padding: 0.6rem !important;
+}
+[data-testid="stForm"] button:hover {
+    background: #3a9d98 !important;
+}
+</style>
+"""
+
 def kpi_row(items):
-    """items = list of (label, value) o (label, value, delta)"""
     cols = st.columns(len(items))
     for col, item in zip(cols, items):
         label, value = item[0], item[1]
         delta = item[2] if len(item) > 2 else None
+        icon  = _kpi_icon(label)
+        lbl   = _kpi_label(label)
+        delta_html = ""
+        if delta is not None:
+            try:
+                dv = float(re.sub(r'[^\d,.\-]', '', str(delta)).replace('.','').replace(',','.'))
+                c  = "#27ae60" if dv >= 0 else "#e74c3c"
+            except Exception:
+                c  = "#888"
+            delta_html = f'<span class="kpi-delta" style="color:{c}">{delta}</span>'
+        card = (f'<div class="kpi-card">'
+                f'<span class="kpi-label"><i class="bi bi-{icon}"></i>{lbl}</span>'
+                f'<span class="kpi-value">{value}</span>'
+                f'{delta_html}'
+                f'</div>')
         with col:
-            st.metric(label=label, value=value, delta=delta)
+            st.markdown(card, unsafe_allow_html=True)
 
 USERS = {"Admin": "12341234Aa$$"}
 
 if not st.session_state.get("authenticated"):
-    st.markdown(CSS, unsafe_allow_html=True)
-    col_l, col_c, col_r = st.columns([1, 1, 1])
+    st.markdown(LOGIN_CSS, unsafe_allow_html=True)
+    _, col_c, _ = st.columns([1, 1.2, 1])
     with col_c:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<div style='height:5vh'></div>", unsafe_allow_html=True)
         if os.path.exists(LOGO_PATH):
-            st.image(LOGO_PATH, width=180)
+            st.image(LOGO_PATH, width=200)
         else:
             st.markdown("## 💊 DCFarma")
+        st.markdown(
+            "<p style='text-align:center;color:#7a9ea0;font-size:0.88rem;"
+            "margin:-0.4rem 0 1.2rem;letter-spacing:0.03em'>"
+            "Contabilidad SaaS · Farmacias</p>",
+            unsafe_allow_html=True,
+        )
         with st.form("login_form"):
             user = st.text_input("Usuario")
             pwd  = st.text_input("Contraseña", type="password")
