@@ -1,21 +1,103 @@
 import streamlit as st
+import os
+
+st.set_page_config(page_title="DCFarma · Contabilidad", page_icon="💊", layout="wide")
+
+LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+
+CSS = """
+<style>
+#MainMenu, footer, header {visibility: hidden;}
+
+/* ── Sidebar ─────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: #0f2335;
+    padding-top: 0.5rem;
+}
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {
+    color: #cfe4f0 !important;
+}
+[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+[data-testid="stSidebar"] hr {border-color: #1e3a52;}
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stCheckbox label {color: #cfe4f0 !important;}
+[data-testid="stSidebar"] [data-baseweb="select"] {
+    background: #1a3a50 !important;
+    border-color: #2a5070 !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] * {color: #fff !important;}
+
+/* ── Metric cards ────────────────────────────────────── */
+.kpi-row {display: flex; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap;}
+.kpi-card {
+    flex: 1; min-width: 140px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 1rem 1.2rem 0.8rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    border-top: 3px solid #4AADA8;
+}
+.kpi-label {font-size: 0.72rem; color: #6b7f8e; font-weight: 600;
+            letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.35rem;}
+.kpi-value {font-size: 1.55rem; font-weight: 700; color: #0f2335; white-space: nowrap;}
+.kpi-delta {font-size: 0.78rem; margin-top: 0.2rem;}
+.kpi-delta.pos {color: #27ae60;} .kpi-delta.neg {color: #e74c3c;}
+
+/* Card accent colors */
+.kpi-ingresos {border-top-color: #27ae60;}
+.kpi-compras  {border-top-color: #3498db;}
+.kpi-gastos   {border-top-color: #e67e22;}
+.kpi-personal {border-top-color: #9b59b6;}
+.kpi-resultado{border-top-color: #4AADA8;}
+.kpi-banco    {border-top-color: #f39c12;}
+
+/* ── General ─────────────────────────────────────────── */
+.block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
+h1, h2, h3 {color: #0f2335;}
+</style>
+"""
+
+def kpi(label, value, css_class="", delta=None):
+    delta_html = ""
+    if delta is not None:
+        neg = str(delta).startswith("-")
+        delta_html = f'<div class="kpi-delta {"neg" if neg else "pos"}">{"▼" if neg else "▲"} {delta}</div>'
+    return f"""
+    <div class="kpi-card {css_class}">
+        <div class="kpi-label">{label}</div>
+        <div class="kpi-value">{value}</div>
+        {delta_html}
+    </div>"""
 
 USERS = {"Admin": "12341234Aa$$"}
 
 if not st.session_state.get("authenticated"):
-    st.set_page_config(page_title="DCFarma - Acceso", page_icon="💊", layout="centered")
-    st.markdown("## 🔐 DCFarma")
-    with st.form("login_form"):
-        user = st.text_input("Usuario")
-        pwd = st.text_input("Contraseña", type="password")
-        ok = st.form_submit_button("Entrar", use_container_width=True)
-        if ok:
-            if user in USERS and USERS[user] == pwd:
-                st.session_state["authenticated"] = True
-                st.session_state["username"] = user
-                st.rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos")
+    st.markdown(CSS, unsafe_allow_html=True)
+    col_l, col_c, col_r = st.columns([1, 1, 1])
+    with col_c:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        if os.path.exists(LOGO_PATH):
+            st.image(LOGO_PATH, width=180)
+        else:
+            st.markdown("## 💊 DCFarma")
+        with st.form("login_form"):
+            user = st.text_input("Usuario")
+            pwd  = st.text_input("Contraseña", type="password")
+            ok   = st.form_submit_button("Entrar", use_container_width=True)
+            if ok:
+                if user in USERS and USERS[user] == pwd:
+                    st.session_state["authenticated"] = True
+                    st.session_state["username"] = user
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
     st.stop()
 
 import pandas as pd
@@ -40,12 +122,17 @@ def get_all_data():
 
 df_compras, df_gastos, df_servicios, df_alliance, df_banco, saldo_banco, gastos_personal = get_all_data()
 
+st.markdown(CSS, unsafe_allow_html=True)
+
 hoy = datetime.today()
 MESES = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",
          7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
 
 with st.sidebar:
-    st.title("💊 DCFarma")
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, width=160)
+    else:
+        st.markdown("## 💊 DCFarma")
     st.caption("Contabilidad SaaS · " + hoy.strftime("%d/%m/%Y"))
     st.markdown("---")
     vista = st.radio("Vista", ["📊 Dashboard","📈 P&G","🛒 Compras","📋 Gastos",
@@ -109,18 +196,22 @@ if vista == "📊 Dashboard":
     tc=s(fc); tg=s(fg); tsi=s(fsi); tal=s(fal)
     ti=tsi+tal; tga=tc+tg; res=ti-tga
 
-    c1,c2,c3,c4 = st.columns(4)
-    c1.metric("💰 Ingresos Totales", fmtk(ti), help="Servicios + Alliance")
-    c2.metric("🛒 Compras", fmtk(tc))
-    c3.metric("📋 Gastos", fmtk(tg))
-    c4.metric("📈 Resultado", fmtk(res), delta=fmtk(res))
+    st.markdown(
+        '<div class="kpi-row">'
+        + kpi("💰 Ingresos Totales", fmtk(ti), "kpi-ingresos")
+        + kpi("🛒 Compras", fmtk(tc), "kpi-compras")
+        + kpi("📋 Gastos", fmtk(tg), "kpi-gastos")
+        + kpi("📈 Resultado", fmtk(res), "kpi-resultado",
+              delta=fmtk(res) if res != 0 else None)
+        + '</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-    d1,d2,d3,d4 = st.columns(4)
-    d1.metric("Ingresos Servicios", fmtk(tsi))
-    d2.metric("Ingresos Alliance", fmtk(tal))
-    d3.metric("Total Gastos", fmtk(tga))
-    d4.metric("Saldo Banco", fmtk(saldo_banco))
+    st.markdown(
+        '<div class="kpi-row">'
+        + kpi("Ingresos Servicios", fmtk(tsi), "kpi-ingresos")
+        + kpi("Ingresos Alliance", fmtk(tal), "kpi-ingresos")
+        + kpi("Total Gastos", fmtk(tga), "kpi-gastos")
+        + kpi("🏦 Saldo Banco", fmtk(saldo_banco), "kpi-banco")
+        + '</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     st.subheader("Evolución mensual")
@@ -183,12 +274,15 @@ elif vista == "📈 P&G":
     ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
     tga = tc + tg + sum(personal_m); res = ti - tga
     tp = sum(personal_m)
-    k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("💰 Ingresos Totales", fmtk(ti))
-    k2.metric("🛒 Compras", fmtk(tc))
-    k3.metric("📋 Gastos", fmtk(tg))
-    k4.metric("👥 Personal", fmtk(tp))
-    k5.metric("📈 Resultado", fmtk(res), delta=fmtk(res))
+    st.markdown(
+        '<div class="kpi-row">'
+        + kpi("💰 Ingresos Totales", fmtk(ti), "kpi-ingresos")
+        + kpi("🛒 Compras", fmtk(tc), "kpi-compras")
+        + kpi("📋 Gastos", fmtk(tg), "kpi-gastos")
+        + kpi("👥 Personal", fmtk(tp), "kpi-personal")
+        + kpi("📈 Resultado", fmtk(res), "kpi-resultado",
+              delta=fmtk(res) if res != 0 else None)
+        + '</div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -264,7 +358,7 @@ elif vista == "🛒 Compras":
     st.header("🛒 Compras")
     fc=filtrar(df_compras)
     total=fc["BASE_IMPONIBLE"].sum() if not fc.empty and "BASE_IMPONIBLE" in fc.columns else 0
-    st.metric("Total Base Imponible", fmtk(total))
+    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-compras") + '</div>', unsafe_allow_html=True)
     if not fc.empty:
         if "LABORATORIO" in fc.columns:
             st.subheader("Por Proveedor")
@@ -286,7 +380,7 @@ elif vista == "📋 Gastos":
     st.header("📋 Gastos")
     fg=filtrar(df_gastos)
     total=fg["BASE_IMPONIBLE"].sum() if not fg.empty and "BASE_IMPONIBLE" in fg.columns else 0
-    st.metric("Total Base Imponible", fmtk(total))
+    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-gastos") + '</div>', unsafe_allow_html=True)
     if not fg.empty:
         if "LABORATORIO" in fg.columns:
             st.subheader("Por Concepto")
@@ -308,7 +402,7 @@ elif vista == "💰 Ingresos Servicios":
     st.header("💰 Ingresos Servicios")
     fsi=filtrar(df_servicios)
     total=fsi["BASE_IMPONIBLE"].sum() if not fsi.empty and "BASE_IMPONIBLE" in fsi.columns else 0
-    st.metric("Total Base Imponible", fmtk(total))
+    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-ingresos") + '</div>', unsafe_allow_html=True)
     if not fsi.empty:
         if "CLIENTE" in fsi.columns:
             st.subheader("Por Cliente")
@@ -330,7 +424,7 @@ elif vista == "🤝 Ingresos Alliance":
     st.header("🤝 Ingresos Alliance")
     fal=filtrar(df_alliance)
     total=fal["BASE_IMPONIBLE"].sum() if not fal.empty and "BASE_IMPONIBLE" in fal.columns else 0
-    st.metric("Total Base Imponible", fmtk(total))
+    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-ingresos") + '</div>', unsafe_allow_html=True)
     if not fal.empty:
         if "FARMACIA" in fal.columns:
             st.subheader("Por Farmacia")
@@ -350,7 +444,7 @@ elif vista == "🤝 Ingresos Alliance":
 
 elif vista == "🏦 Banco":
     st.header("🏦 Banco · Santander")
-    st.metric("Saldo Actual", fmtk(saldo_banco))
+    st.markdown('<div class="kpi-row">' + kpi("🏦 Saldo Actual", fmtk(saldo_banco), "kpi-banco") + '</div>', unsafe_allow_html=True)
     fb=filtrar(df_banco)
     if not fb.empty:
         st.dataframe(fb.loc[:,~fb.columns.duplicated()], use_container_width=True, hide_index=True)
@@ -440,13 +534,15 @@ elif vista == "📅 Forecast":
         saldo_fin   = float(saldo_banco) + cobros_pend + pagos_pend  # pagos ya son negativos
         n_vencidos  = len(df_ev[df_ev["Estado"]=="Vencido"])
 
-        k1,k2,k3,k4 = st.columns(4)
-        k1.metric("🏦 Saldo Banco Hoy",      fmtk(saldo_banco))
-        k2.metric("💰 Cobros pendientes",     fmtk(cobros_pend))
-        k3.metric("💸 Pagos pendientes",      fmtk(abs(pagos_pend)))
-        k4.metric("📊 Saldo estimado 60d",    fmtk(saldo_fin),
-                  delta=fmtk(saldo_fin - float(saldo_banco)),
-                  delta_color="normal")
+        delta_60 = saldo_fin - float(saldo_banco)
+        st.markdown(
+            '<div class="kpi-row">'
+            + kpi("🏦 Saldo Banco Hoy", fmtk(saldo_banco), "kpi-banco")
+            + kpi("💰 Cobros pendientes", fmtk(cobros_pend), "kpi-ingresos")
+            + kpi("💸 Pagos pendientes", fmtk(abs(pagos_pend)), "kpi-gastos")
+            + kpi("📊 Saldo estimado 60d", fmtk(saldo_fin), "kpi-resultado",
+                  delta=fmtk(delta_60) if delta_60 != 0 else None)
+            + '</div>', unsafe_allow_html=True)
 
         if n_vencidos > 0:
             st.warning(f"⚠️ Tienes **{n_vencidos} evento(s) vencido(s)** sin registrar pago/cobro")
