@@ -17,52 +17,50 @@ CSS = """
 }
 [data-testid="stSidebar"] hr {border-color: #c8e8e6;}
 
-/* ── Sidebar Navigation ──────────────────────────────── */
-[data-testid="stSidebar"] [data-testid="stRadio"] > div {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-/* Hide the radio circle indicator */
-[data-testid="stSidebar"] [data-baseweb="radio"] > div:first-child {
-    display: none !important;
-}
-/* Nav item label */
-[data-testid="stSidebar"] [data-testid="stRadio"] label {
-    display: flex;
-    align-items: center;
-    min-height: 2.4rem;
-    padding: 0.45rem 0.75rem 0.45rem 0.9rem;
-    border-radius: 8px;
-    border-left: 3px solid transparent;
-    cursor: pointer;
-    background: transparent;
-    transition: background 0.15s, border-color 0.15s;
+/* ── Sidebar Navigation custom ───────────────────────── */
+.dcf-nav { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; }
+.nav-item {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.42rem 0.6rem 0.42rem 0.5rem;
+    border-radius: 8px; border-left: 3px solid transparent;
+    text-decoration: none !important; color: #4a6a6a !important;
+    font-size: 0.875rem; font-weight: 500;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     margin-bottom: 1px;
 }
-[data-testid="stSidebar"] [data-testid="stRadio"] label p {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #4a6a6a;
-    margin: 0;
-    letter-spacing: 0.01em;
-}
-/* Hover */
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+.nav-item:hover {
     background: rgba(74,173,168,0.10);
     border-left-color: rgba(74,173,168,0.45);
+    color: #1a3a3a !important;
 }
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover p {
-    color: #1a3a3a;
-}
-/* Active / checked */
-[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+.nav-item.active {
     background: rgba(74,173,168,0.14);
     border-left-color: #4AADA8;
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p {
-    color: #1a3a3a;
+    color: #1a3a3a !important;
     font-weight: 700;
+}
+.nav-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 1.9rem; height: 1.9rem;
+    border-radius: 7px;
+    background: rgba(74,173,168,0.12);
+    font-size: 1rem; flex-shrink: 0;
+}
+.nav-item:hover .nav-icon { background: rgba(74,173,168,0.20); }
+.nav-item.active .nav-icon { background: rgba(74,173,168,0.30); }
+.nav-label { line-height: 1.2; }
+.nav-logout {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.42rem 0.6rem 0.42rem 0.5rem;
+    border-radius: 8px; border-left: 3px solid transparent;
+    text-decoration: none !important; color: #e57373 !important;
+    font-size: 0.875rem; font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+    margin-top: 4px;
+}
+.nav-logout:hover {
+    background: rgba(229,115,115,0.10);
+    border-left-color: #e57373;
 }
 
 /* ── Metric cards (st.metric nativo) ─────────────────── */
@@ -88,20 +86,6 @@ CSS = """
 [data-testid="stMetricDelta"] svg {display: none;}
 [data-testid="stMetricDelta"] > div {font-size: 0.78rem !important;}
 
-/* ── Cerrar sesión button ─────────────────────────────── */
-[data-testid="stSidebar"] [data-testid="stButton"][key="logout"] button {
-    background: transparent;
-    border: 1px solid #e57373;
-    color: #e57373;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    transition: background 0.15s, color 0.15s;
-}
-[data-testid="stSidebar"] [data-testid="stButton"][key="logout"] button:hover {
-    background: #e57373;
-    color: #fff;
-}
 
 /* ── General ─────────────────────────────────────────── */
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
@@ -170,6 +154,20 @@ hoy = datetime.today()
 MESES = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",
          7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
 
+NAV_ITEMS = [
+    ("📊", "Dashboard",          "dashboard"),
+    ("📈", "P&G",                "pyg"),
+    ("🛒", "Compras",            "compras"),
+    ("📋", "Gastos",             "gastos"),
+    ("💰", "Ingresos Servicios", "servicios"),
+    ("🤝", "Ingresos Alliance",  "alliance"),
+    ("🏦", "Banco",              "banco"),
+    ("📅", "Forecast",           "forecast"),
+]
+vista = st.query_params.get("v", "dashboard")
+if vista not in [s for _, _, s in NAV_ITEMS]:
+    vista = "dashboard"
+
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=160)
@@ -177,16 +175,14 @@ with st.sidebar:
         st.markdown("## 💊 DCFarma")
     st.caption("Contabilidad SaaS · " + hoy.strftime("%d/%m/%Y"))
     st.markdown("---")
-    vista = st.radio("Navegación", [
-        "📊 Dashboard",
-        "📈 P&G",
-        "🛒 Compras",
-        "📋 Gastos",
-        "💰 Ingresos Servicios",
-        "🤝 Ingresos Alliance",
-        "🏦 Banco",
-        "📅 Forecast",
-    ], label_visibility="collapsed")
+    nav_html = '<div class="dcf-nav">'
+    for icon, label, slug in NAV_ITEMS:
+        cls = "nav-item active" if vista == slug else "nav-item"
+        nav_html += (f'<a href="?v={slug}" class="{cls}">'
+                     f'<span class="nav-icon">{icon}</span>'
+                     f'<span class="nav-label">{label}</span></a>')
+    nav_html += "</div>"
+    st.markdown(nav_html, unsafe_allow_html=True)
     st.markdown("---")
     anios_set = set()
     for _df in [df_compras, df_gastos, df_servicios, df_alliance]:
@@ -240,7 +236,7 @@ def fdate(v):
     try: return v.strftime("%d/%m/%Y") if pd.notna(v) else ""
     except: return ""
 
-if vista == "📊 Dashboard":
+if vista == "dashboard":
     st.header("Panel de Control")
     fc=filtrar(df_compras); fg=filtrar(df_gastos)
     fsi=filtrar(df_servicios); fal=filtrar(df_alliance)
@@ -290,7 +286,7 @@ if vista == "📊 Dashboard":
                            yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig2, use_container_width=True)
 
-elif vista == "📈 P&G":
+elif vista == "pyg":
     meses_pg = sorted(mes_sel) if mes_sel else list(range(1, 13))
     label_pg = f"meses seleccionados" if len(meses_pg) < 12 else "año completo"
     st.header(f"📈 Pérdidas y Ganancias · {anio_sel}")
@@ -400,7 +396,7 @@ elif vista == "📈 P&G":
     )
     st.plotly_chart(fig, use_container_width=True)
 
-elif vista == "🛒 Compras":
+elif vista == "compras":
     st.header("🛒 Compras")
     fc=filtrar(df_compras)
     total=fc["BASE_IMPONIBLE"].sum() if not fc.empty and "BASE_IMPONIBLE" in fc.columns else 0
@@ -422,7 +418,7 @@ elif vista == "🛒 Compras":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "📋 Gastos":
+elif vista == "gastos":
     st.header("📋 Gastos")
     fg=filtrar(df_gastos)
     total=fg["BASE_IMPONIBLE"].sum() if not fg.empty and "BASE_IMPONIBLE" in fg.columns else 0
@@ -444,7 +440,7 @@ elif vista == "📋 Gastos":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "💰 Ingresos Servicios":
+elif vista == "servicios":
     st.header("💰 Ingresos Servicios")
     fsi=filtrar(df_servicios)
     total=fsi["BASE_IMPONIBLE"].sum() if not fsi.empty and "BASE_IMPONIBLE" in fsi.columns else 0
@@ -466,7 +462,7 @@ elif vista == "💰 Ingresos Servicios":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "🤝 Ingresos Alliance":
+elif vista == "alliance":
     st.header("🤝 Ingresos Alliance")
     fal=filtrar(df_alliance)
     total=fal["BASE_IMPONIBLE"].sum() if not fal.empty and "BASE_IMPONIBLE" in fal.columns else 0
@@ -488,7 +484,7 @@ elif vista == "🤝 Ingresos Alliance":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "🏦 Banco":
+elif vista == "banco":
     st.header("🏦 Banco · Santander")
     kpi_row([("🏦 Saldo Actual", fmtk(saldo_banco))])
     fb=filtrar(df_banco)
@@ -496,7 +492,7 @@ elif vista == "🏦 Banco":
         st.dataframe(fb.loc[:,~fb.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin movimientos para el periodo seleccionado")
 
-elif vista == "📅 Forecast":
+elif vista == "forecast":
     import datetime as dt
     st.header("📅 Forecast de Cobros y Pagos")
     hoy_fc = datetime.today().date()
