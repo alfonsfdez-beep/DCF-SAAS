@@ -9,13 +9,61 @@ CSS = """
 <style>
 #MainMenu, footer, header {visibility: hidden;}
 
-/* ── Sidebar ─────────────────────────────────────────── */
+/* ── Sidebar base ────────────────────────────────────── */
 [data-testid="stSidebar"] {
     background: #f4fafa;
     border-right: 2px solid #c8e8e6;
     padding-top: 0.5rem;
 }
 [data-testid="stSidebar"] hr {border-color: #c8e8e6;}
+
+/* ── Sidebar Navigation ──────────────────────────────── */
+[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+/* Hide the radio circle indicator */
+[data-testid="stSidebar"] [data-baseweb="radio"] > div:first-child {
+    display: none !important;
+}
+/* Nav item label */
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    display: flex;
+    align-items: center;
+    min-height: 2.4rem;
+    padding: 0.45rem 0.75rem 0.45rem 0.9rem;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    background: transparent;
+    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 1px;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label p {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4a6a6a;
+    margin: 0;
+    letter-spacing: 0.01em;
+}
+/* Hover */
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+    background: rgba(74,173,168,0.10);
+    border-left-color: rgba(74,173,168,0.45);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover p {
+    color: #1a3a3a;
+}
+/* Active / checked */
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+    background: rgba(74,173,168,0.14);
+    border-left-color: #4AADA8;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p {
+    color: #1a3a3a;
+    font-weight: 700;
+}
 
 /* ── Metric cards (st.metric nativo) ─────────────────── */
 [data-testid="stMetric"] {
@@ -39,6 +87,21 @@ CSS = """
 }
 [data-testid="stMetricDelta"] svg {display: none;}
 [data-testid="stMetricDelta"] > div {font-size: 0.78rem !important;}
+
+/* ── Cerrar sesión button ─────────────────────────────── */
+[data-testid="stSidebar"] [data-testid="stButton"][key="logout"] button {
+    background: transparent;
+    border: 1px solid #e57373;
+    color: #e57373;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s;
+}
+[data-testid="stSidebar"] [data-testid="stButton"][key="logout"] button:hover {
+    background: #e57373;
+    color: #fff;
+}
 
 /* ── General ─────────────────────────────────────────── */
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
@@ -114,10 +177,16 @@ with st.sidebar:
         st.markdown("## 💊 DCFarma")
     st.caption("Contabilidad SaaS · " + hoy.strftime("%d/%m/%Y"))
     st.markdown("---")
-    vista = st.radio("Vista", ["📊 Dashboard","📈 P&G","🛒 Compras","📋 Gastos",
-                                "💰 Ingresos Servicios","🤝 Ingresos Alliance","🏦 Banco",
-                                "📅 Forecast"],
-                     label_visibility="collapsed")
+    vista = st.radio("Navegación", [
+        "📊 Dashboard",
+        "📈 P&G",
+        "🛒 Compras",
+        "📋 Gastos",
+        "💰 Ingresos Servicios",
+        "🤝 Ingresos Alliance",
+        "🏦 Banco",
+        "📅 Forecast",
+    ], label_visibility="collapsed")
     st.markdown("---")
     anios_set = set()
     for _df in [df_compras, df_gastos, df_servicios, df_alliance]:
@@ -146,6 +215,10 @@ with st.sidebar:
     st.markdown("---")
     if st.button("🔄 Actualizar datos", use_container_width=True):
         st.cache_data.clear()
+        st.rerun()
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    if st.button("🚪 Cerrar sesión", use_container_width=True, key="logout"):
+        st.session_state.clear()
         st.rerun()
 
 def filtrar(df):
