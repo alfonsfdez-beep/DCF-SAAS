@@ -17,50 +17,32 @@ CSS = """
 }
 [data-testid="stSidebar"] hr {border-color: #c8e8e6;}
 
-/* ── Sidebar Navigation custom ───────────────────────── */
-.dcf-nav { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; }
-.nav-item {
-    display: flex; align-items: center; gap: 0.65rem;
-    padding: 0.42rem 0.6rem 0.42rem 0.5rem;
-    border-radius: 8px; border-left: 3px solid transparent;
-    text-decoration: none !important; color: #4a6a6a !important;
-    font-size: 0.875rem; font-weight: 500;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+/* ── Sidebar Navigation (st.radio restyled) ──────────── */
+[data-testid="stSidebar"] [data-baseweb="radio"] > div:first-child {
+    display: none !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] > div { gap: 1px; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    display: flex; align-items: center;
+    padding: 0.45rem 0.6rem 0.45rem 0.7rem;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    cursor: pointer; background: transparent;
+    transition: background 0.15s, border-color 0.15s;
     margin-bottom: 1px;
 }
-.nav-item:hover {
-    background: rgba(74,173,168,0.10);
-    border-left-color: rgba(74,173,168,0.45);
-    color: #1a3a3a !important;
+[data-testid="stSidebar"] [data-testid="stRadio"] label p {
+    font-size: 0.88rem; font-weight: 500; color: #4a6a6a; margin: 0;
 }
-.nav-item.active {
-    background: rgba(74,173,168,0.14);
-    border-left-color: #4AADA8;
-    color: #1a3a3a !important;
-    font-weight: 700;
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+    background: rgba(74,173,168,0.10); border-left-color: rgba(74,173,168,0.4);
 }
-.nav-icon {
-    display: flex; align-items: center; justify-content: center;
-    width: 1.9rem; height: 1.9rem;
-    border-radius: 7px;
-    background: rgba(74,173,168,0.12);
-    font-size: 1rem; flex-shrink: 0;
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover p { color: #1a3a3a; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+    background: rgba(74,173,168,0.14); border-left-color: #4AADA8;
 }
-.nav-item:hover .nav-icon { background: rgba(74,173,168,0.20); }
-.nav-item.active .nav-icon { background: rgba(74,173,168,0.30); }
-.nav-label { line-height: 1.2; }
-.nav-logout {
-    display: flex; align-items: center; gap: 0.65rem;
-    padding: 0.42rem 0.6rem 0.42rem 0.5rem;
-    border-radius: 8px; border-left: 3px solid transparent;
-    text-decoration: none !important; color: #e57373 !important;
-    font-size: 0.875rem; font-weight: 500;
-    transition: background 0.15s, border-color 0.15s;
-    margin-top: 4px;
-}
-.nav-logout:hover {
-    background: rgba(229,115,115,0.10);
-    border-left-color: #e57373;
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p {
+    color: #1a3a3a; font-weight: 700;
 }
 
 /* ── Metric cards (st.metric nativo) ─────────────────── */
@@ -154,20 +136,6 @@ hoy = datetime.today()
 MESES = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",
          7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
 
-NAV_ITEMS = [
-    ("📊", "Dashboard",          "dashboard"),
-    ("📈", "P&G",                "pyg"),
-    ("🛒", "Compras",            "compras"),
-    ("📋", "Gastos",             "gastos"),
-    ("💰", "Ingresos Servicios", "servicios"),
-    ("🤝", "Ingresos Alliance",  "alliance"),
-    ("🏦", "Banco",              "banco"),
-    ("📅", "Forecast",           "forecast"),
-]
-vista = st.query_params.get("v", "dashboard")
-if vista not in [s for _, _, s in NAV_ITEMS]:
-    vista = "dashboard"
-
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=160)
@@ -175,14 +143,19 @@ with st.sidebar:
         st.markdown("## 💊 DCFarma")
     st.caption("Contabilidad SaaS · " + hoy.strftime("%d/%m/%Y"))
     st.markdown("---")
-    nav_html = '<div class="dcf-nav">'
-    for icon, label, slug in NAV_ITEMS:
-        cls = "nav-item active" if vista == slug else "nav-item"
-        nav_html += (f'<a href="?v={slug}" class="{cls}">'
-                     f'<span class="nav-icon">{icon}</span>'
-                     f'<span class="nav-label">{label}</span></a>')
-    nav_html += "</div>"
-    st.markdown(nav_html, unsafe_allow_html=True)
+    vista = st.radio("Navegación", [
+        "dashboard", "pyg", "compras", "gastos",
+        "servicios", "alliance", "banco", "forecast",
+    ], format_func=lambda s: {
+        "dashboard": "📊  Dashboard",
+        "pyg":       "📈  P&G",
+        "compras":   "🛒  Compras",
+        "gastos":    "📋  Gastos",
+        "servicios": "💰  Ingresos Servicios",
+        "alliance":  "🤝  Ingresos Alliance",
+        "banco":     "🏦  Banco",
+        "forecast":  "📅  Forecast",
+    }[s], label_visibility="collapsed")
     st.markdown("---")
     anios_set = set()
     for _df in [df_compras, df_gastos, df_servicios, df_alliance]:
