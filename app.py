@@ -17,32 +17,9 @@ CSS = """
 }
 [data-testid="stSidebar"] hr {border-color: #c8e8e6;}
 
-/* ── Sidebar Navigation (st.radio restyled) ──────────── */
-[data-testid="stSidebar"] [data-baseweb="radio"] > div:first-child {
-    display: none !important;
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] > div { gap: 1px; }
-[data-testid="stSidebar"] [data-testid="stRadio"] label {
-    display: flex; align-items: center;
-    padding: 0.45rem 0.6rem 0.45rem 0.7rem;
-    border-radius: 8px;
-    border-left: 3px solid transparent;
-    cursor: pointer; background: transparent;
-    transition: background 0.15s, border-color 0.15s;
-    margin-bottom: 1px;
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] label p {
-    font-size: 0.88rem; font-weight: 500; color: #4a6a6a; margin: 0;
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-    background: rgba(74,173,168,0.10); border-left-color: rgba(74,173,168,0.4);
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover p { color: #1a3a3a; }
-[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
-    background: rgba(74,173,168,0.14); border-left-color: #4AADA8;
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p {
-    color: #1a3a3a; font-weight: 700;
+/* ── option_menu tweak: left border en activo ─────────── */
+[data-testid="stSidebar"] .nav-link-selected {
+    border-left: 3px solid #4AADA8 !important;
 }
 
 /* ── Metric cards (st.metric nativo) ─────────────────── */
@@ -113,6 +90,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from streamlit_option_menu import option_menu
 from data_loader import (load_compras, load_gastos, load_ingresos_servicios,
                          load_ingresos_alliance, load_banco, load_gastos_personal)
 
@@ -143,19 +121,29 @@ with st.sidebar:
         st.markdown("## 💊 DCFarma")
     st.caption("Contabilidad SaaS · " + hoy.strftime("%d/%m/%Y"))
     st.markdown("---")
-    vista = st.radio("Navegación", [
-        "dashboard", "pyg", "compras", "gastos",
-        "servicios", "alliance", "banco", "forecast",
-    ], format_func=lambda s: {
-        "dashboard": "📊  Dashboard",
-        "pyg":       "📈  P&G",
-        "compras":   "🛒  Compras",
-        "gastos":    "📋  Gastos",
-        "servicios": "💰  Ingresos Servicios",
-        "alliance":  "🤝  Ingresos Alliance",
-        "banco":     "🏦  Banco",
-        "forecast":  "📅  Forecast",
-    }[s], label_visibility="collapsed")
+    vista = option_menu(
+        menu_title=None,
+        options=["Dashboard", "P&G", "Compras", "Gastos",
+                 "Ingresos Servicios", "Ingresos Alliance", "Banco", "Forecast"],
+        icons=["speedometer2", "graph-up", "cart3", "receipt",
+               "cash-coin", "people-fill", "bank", "calendar3"],
+        default_index=0,
+        key="nav_menu",
+        styles={
+            "container":        {"padding": "0", "background-color": "transparent"},
+            "icon":             {"color": "#4AADA8", "font-size": "1rem"},
+            "nav-link":         {
+                "font-size": "0.875rem", "text-align": "left",
+                "padding": "0.48rem 0.65rem", "border-radius": "8px",
+                "color": "#4a6a6a", "margin": "1px 0",
+                "--hover-color": "rgba(74,173,168,0.10)",
+            },
+            "nav-link-selected": {
+                "background-color": "rgba(74,173,168,0.16)",
+                "color": "#1a3a3a", "font-weight": "700",
+            },
+        }
+    )
     st.markdown("---")
     anios_set = set()
     for _df in [df_compras, df_gastos, df_servicios, df_alliance]:
@@ -209,7 +197,7 @@ def fdate(v):
     try: return v.strftime("%d/%m/%Y") if pd.notna(v) else ""
     except: return ""
 
-if vista == "dashboard":
+if vista == "Dashboard":
     st.header("Panel de Control")
     fc=filtrar(df_compras); fg=filtrar(df_gastos)
     fsi=filtrar(df_servicios); fal=filtrar(df_alliance)
@@ -259,7 +247,7 @@ if vista == "dashboard":
                            yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig2, use_container_width=True)
 
-elif vista == "pyg":
+elif vista == "P&G":
     meses_pg = sorted(mes_sel) if mes_sel else list(range(1, 13))
     label_pg = f"meses seleccionados" if len(meses_pg) < 12 else "año completo"
     st.header(f"📈 Pérdidas y Ganancias · {anio_sel}")
@@ -369,7 +357,7 @@ elif vista == "pyg":
     )
     st.plotly_chart(fig, use_container_width=True)
 
-elif vista == "compras":
+elif vista == "Compras":
     st.header("🛒 Compras")
     fc=filtrar(df_compras)
     total=fc["BASE_IMPONIBLE"].sum() if not fc.empty and "BASE_IMPONIBLE" in fc.columns else 0
@@ -391,7 +379,7 @@ elif vista == "compras":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "gastos":
+elif vista == "Gastos":
     st.header("📋 Gastos")
     fg=filtrar(df_gastos)
     total=fg["BASE_IMPONIBLE"].sum() if not fg.empty and "BASE_IMPONIBLE" in fg.columns else 0
@@ -413,7 +401,7 @@ elif vista == "gastos":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "servicios":
+elif vista == "Ingresos Servicios":
     st.header("💰 Ingresos Servicios")
     fsi=filtrar(df_servicios)
     total=fsi["BASE_IMPONIBLE"].sum() if not fsi.empty and "BASE_IMPONIBLE" in fsi.columns else 0
@@ -435,7 +423,7 @@ elif vista == "servicios":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "alliance":
+elif vista == "Ingresos Alliance":
     st.header("🤝 Ingresos Alliance")
     fal=filtrar(df_alliance)
     total=fal["BASE_IMPONIBLE"].sum() if not fal.empty and "BASE_IMPONIBLE" in fal.columns else 0
@@ -457,7 +445,7 @@ elif vista == "alliance":
         st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin datos para el periodo seleccionado")
 
-elif vista == "banco":
+elif vista == "Banco":
     st.header("🏦 Banco · Santander")
     kpi_row([("🏦 Saldo Actual", fmtk(saldo_banco))])
     fb=filtrar(df_banco)
@@ -465,7 +453,7 @@ elif vista == "banco":
         st.dataframe(fb.loc[:,~fb.columns.duplicated()], use_container_width=True, hide_index=True)
     else: st.info("Sin movimientos para el periodo seleccionado")
 
-elif vista == "forecast":
+elif vista == "Forecast":
     import datetime as dt
     st.header("📅 Forecast de Cobros y Pagos")
     hoy_fc = datetime.today().date()
