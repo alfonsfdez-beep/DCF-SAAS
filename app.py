@@ -47,7 +47,7 @@ with st.sidebar:
     st.title("💊 DCFarma")
     st.caption("Contabilidad SaaS · " + hoy.strftime("%d/%m/%Y"))
     st.markdown("---")
-    vista = st.radio("Vista", ["📊 Dashboard","🛒 Compras","📋 Gastos",
+    vista = st.radio("Vista", ["📊 Dashboard","📈 P&G","🛒 Compras","📋 Gastos",
                                 "💰 Ingresos Servicios","🤝 Ingresos Alliance","🏦 Banco",
                                 "📅 Forecast"],
                      label_visibility="collapsed")
@@ -149,6 +149,112 @@ if vista == "📊 Dashboard":
                            xaxis=dict(showgrid=True,gridcolor="#f0f0f0"),
                            yaxis=dict(autorange="reversed"))
         st.plotly_chart(fig2, use_container_width=True)
+
+elif vista == "📈 P&G":
+    st.header(f"📈 Pérdidas y Ganancias · {anio_sel}")
+    st.caption("Vista anual completa — el filtro de meses no aplica aquí")
+
+    MESES_C = list(range(1, 13))
+    MESES_L = [MESES[m][:3] for m in MESES_C]
+
+    def mes_serie(df):
+        if df is None or df.empty or "BASE_IMPONIBLE" not in df.columns:
+            return [0.0] * 12
+        df_a = df[df["ANO"] == int(anio_sel)] if "ANO" in df.columns else df
+        return [float(df_a[df_a["MES"] == m]["BASE_IMPONIBLE"].sum()) if "MES" in df_a.columns else 0.0
+                for m in MESES_C]
+
+    servicios_m = mes_serie(df_servicios)
+    alliance_m  = mes_serie(df_alliance)
+    compras_m   = mes_serie(df_compras)
+    gastos_m    = mes_serie(df_gastos)
+
+    ingresos_m  = [s + a for s, a in zip(servicios_m, alliance_m)]
+    total_gasto_m = [c + g for c, g in zip(compras_m, gastos_m)]
+    resultado_m = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
+
+    def fila(valores, negrita=False):
+        total = sum(valores)
+        celdas = [fmt(v) for v in valores] + [fmt(total)]
+        return celdas
+
+    # ── KPIs resumen ──────────────────────────────────────────────────────────
+    ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
+    tga = tc + tg; res = ti - tga
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("💰 Ingresos Totales", fmtk(ti))
+    k2.metric("🛒 Compras", fmtk(tc))
+    k3.metric("📋 Gastos", fmtk(tg))
+    k4.metric("📈 Resultado", fmtk(res), delta=fmtk(res))
+
+    st.markdown("---")
+
+    # ── Tabla P&G ─────────────────────────────────────────────────────────────
+    cols_tabla = MESES_L + ["TOTAL"]
+
+    def build_row(label, valores):
+        total = sum(valores)
+        return {"Concepto": label,
+                **{MESES_L[i]: fmt(valores[i]) for i in range(12)},
+                "TOTAL": fmt(total)}
+
+    filas = [
+        build_row("Servicios",       servicios_m),
+        build_row("Alliance",        alliance_m),
+        build_row("TOTAL INGRESOS",  ingresos_m),
+        build_row("Compras",         compras_m),
+        build_row("Gastos",          gastos_m),
+        build_row("TOTAL GASTOS",    total_gasto_m),
+        build_row("RESULTADO",       resultado_m),
+    ]
+
+    df_pg = pd.DataFrame(filas).set_index("Concepto")
+    totales_rows = ["TOTAL INGRESOS", "TOTAL GASTOS", "RESULTADO"]
+
+    def color_resultado(val):
+        try:
+            v = float(str(val).replace(".","").replace(",",".").replace("€","").strip())
+            if v < 0: return "color: #e74c3c; font-weight:bold"
+            if v > 0: return "color: #27ae60; font-weight:bold"
+        except: pass
+        return ""
+
+    base_style = (df_pg.style
+                  .set_properties(**{"text-align": "right", "font-size": "0.85rem"})
+                  .set_properties(subset=pd.IndexSlice[totales_rows, :],
+                                  **{"font-weight": "bold", "background-color": "#f8f9fa"}))
+    try:
+        styled = base_style.map(color_resultado, subset=pd.IndexSlice[["RESULTADO"], :])
+    except AttributeError:
+        styled = base_style.applymap(color_resultado, subset=pd.IndexSlice[["RESULTADO"], :])
+
+    st.dataframe(styled, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Gráfico mensual ───────────────────────────────────────────────────────
+    st.subheader("Evolución mensual")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name="Ingresos", x=MESES_L, y=ingresos_m,
+                         marker_color="#2ecc71", opacity=0.85))
+    fig.add_trace(go.Bar(name="Compras",  x=MESES_L, y=compras_m,
+                         marker_color="#3498db", opacity=0.85))
+    fig.add_trace(go.Bar(name="Gastos",   x=MESES_L, y=gastos_m,
+                         marker_color="#e67e22", opacity=0.85))
+    fig.add_trace(go.Scatter(name="Resultado", x=MESES_L, y=resultado_m,
+                             mode="lines+markers",
+                             line=dict(color="#8e44ad", width=3),
+                             marker=dict(size=9, color=[
+                                 "#27ae60" if v >= 0 else "#e74c3c" for v in resultado_m
+                             ])))
+    fig.update_layout(
+        barmode="group", height=380, margin=dict(l=0, r=0, t=30, b=0),
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+        yaxis=dict(showgrid=True, gridcolor="#f0f0f0"),
+        hovermode="x unified",
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 elif vista == "🛒 Compras":
     st.header("🛒 Compras")
