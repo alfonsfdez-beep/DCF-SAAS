@@ -17,28 +17,28 @@ CSS = """
 }
 [data-testid="stSidebar"] hr {border-color: #c8e8e6;}
 
-/* ── Metric cards ────────────────────────────────────── */
-.kpi-card {
-    background: #fff;
+/* ── Metric cards (st.metric nativo) ─────────────────── */
+[data-testid="stMetric"] {
+    background: #ffffff;
     border-radius: 10px;
-    padding: 1rem 1.2rem 0.9rem;
-    box-shadow: 0 1px 8px rgba(74,173,168,0.10);
+    padding: 1rem 1.2rem 0.9rem !important;
+    box-shadow: 0 1px 8px rgba(74,173,168,0.12);
     border-top: 3px solid #4AADA8;
-    margin-bottom: 0.5rem;
 }
-.kpi-label {font-size: 0.70rem; color: #7a9ea0; font-weight: 700;
-            letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.3rem;}
-.kpi-value {font-size: 1.5rem; font-weight: 700; color: #1a3a3a; white-space: nowrap;}
-.kpi-delta {font-size: 0.78rem; margin-top: 0.2rem;}
-.kpi-delta.pos {color: #27ae60;} .kpi-delta.neg {color: #e74c3c;}
-
-/* Card accent colors */
-.kpi-ingresos {border-top-color: #27ae60;}
-.kpi-compras  {border-top-color: #3498db;}
-.kpi-gastos   {border-top-color: #e67e22;}
-.kpi-personal {border-top-color: #9b59b6;}
-.kpi-resultado{border-top-color: #4AADA8;}
-.kpi-banco    {border-top-color: #f39c12;}
+[data-testid="stMetricLabel"] > div {
+    font-size: 0.70rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #7a9ea0 !important;
+}
+[data-testid="stMetricValue"] > div {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: #1a3a3a !important;
+}
+[data-testid="stMetricDelta"] svg {display: none;}
+[data-testid="stMetricDelta"] > div {font-size: 0.78rem !important;}
 
 /* ── General ─────────────────────────────────────────── */
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
@@ -46,25 +46,14 @@ h1, h2, h3 {color: #1a3a3a;}
 </style>
 """
 
-def kpi(label, value, css_class="", delta=None):
-    delta_html = ""
-    if delta is not None:
-        neg = str(delta).startswith("-")
-        delta_html = f'<div class="kpi-delta {"neg" if neg else "pos"}">{"▼" if neg else "▲"} {delta}</div>'
-    return f"""<div class="kpi-card {css_class}">
-        <div class="kpi-label">{label}</div>
-        <div class="kpi-value">{value}</div>
-        {delta_html}
-    </div>"""
-
 def kpi_row(items):
-    """items = list of (label, value, css_class) o (label, value, css_class, delta)"""
+    """items = list of (label, value) o (label, value, delta)"""
     cols = st.columns(len(items))
     for col, item in zip(cols, items):
-        label, value, css_class = item[0], item[1], item[2]
-        delta = item[3] if len(item) > 3 else None
+        label, value = item[0], item[1]
+        delta = item[2] if len(item) > 2 else None
         with col:
-            st.markdown(kpi(label, value, css_class, delta), unsafe_allow_html=True)
+            st.metric(label=label, value=value, delta=delta)
 
 USERS = {"Admin": "12341234Aa$$"}
 
@@ -187,16 +176,16 @@ if vista == "📊 Dashboard":
     ti=tsi+tal; tga=tc+tg; res=ti-tga
 
     kpi_row([
-        ("💰 Ingresos Totales", fmtk(ti),  "kpi-ingresos", fmtk(res) if res != 0 else None),
-        ("🛒 Compras",          fmtk(tc),  "kpi-compras"),
-        ("📋 Gastos",           fmtk(tg),  "kpi-gastos"),
-        ("📈 Resultado",        fmtk(res), "kpi-resultado", fmtk(res) if res != 0 else None),
+        ("💰 Ingresos Totales", fmtk(ti),  fmtk(res) if res != 0 else None),
+        ("🛒 Compras",          fmtk(tc)),
+        ("📋 Gastos",           fmtk(tg)),
+        ("📈 Resultado",        fmtk(res), fmtk(res) if res != 0 else None),
     ])
     kpi_row([
-        ("Ingresos Servicios", fmtk(tsi),        "kpi-ingresos"),
-        ("Ingresos Alliance",  fmtk(tal),         "kpi-ingresos"),
-        ("Total Gastos",       fmtk(tga),         "kpi-gastos"),
-        ("🏦 Saldo Banco",     fmtk(saldo_banco), "kpi-banco"),
+        ("Ingresos Servicios", fmtk(tsi)),
+        ("Ingresos Alliance",  fmtk(tal)),
+        ("Total Gastos",       fmtk(tga)),
+        ("🏦 Saldo Banco",     fmtk(saldo_banco)),
     ])
 
     st.markdown("---")
@@ -261,11 +250,11 @@ elif vista == "📈 P&G":
     tga = tc + tg + sum(personal_m); res = ti - tga
     tp = sum(personal_m)
     kpi_row([
-        ("💰 Ingresos Totales", fmtk(ti),  "kpi-ingresos"),
-        ("🛒 Compras",          fmtk(tc),  "kpi-compras"),
-        ("📋 Gastos",           fmtk(tg),  "kpi-gastos"),
-        ("👥 Personal",         fmtk(tp),  "kpi-personal"),
-        ("📈 Resultado",        fmtk(res), "kpi-resultado", fmtk(res) if res != 0 else None),
+        ("💰 Ingresos Totales", fmtk(ti)),
+        ("🛒 Compras",          fmtk(tc)),
+        ("📋 Gastos",           fmtk(tg)),
+        ("👥 Personal",         fmtk(tp)),
+        ("📈 Resultado",        fmtk(res), fmtk(res) if res != 0 else None),
     ])
 
     st.markdown("---")
@@ -342,7 +331,7 @@ elif vista == "🛒 Compras":
     st.header("🛒 Compras")
     fc=filtrar(df_compras)
     total=fc["BASE_IMPONIBLE"].sum() if not fc.empty and "BASE_IMPONIBLE" in fc.columns else 0
-    kpi_row([("Total Base Imponible", fmtk(total), "kpi-compras")])
+    kpi_row([("Total Base Imponible", fmtk(total))])
     if not fc.empty:
         if "LABORATORIO" in fc.columns:
             st.subheader("Por Proveedor")
@@ -364,7 +353,7 @@ elif vista == "📋 Gastos":
     st.header("📋 Gastos")
     fg=filtrar(df_gastos)
     total=fg["BASE_IMPONIBLE"].sum() if not fg.empty and "BASE_IMPONIBLE" in fg.columns else 0
-    kpi_row([("Total Base Imponible", fmtk(total), "kpi-gastos")])
+    kpi_row([("Total Base Imponible", fmtk(total))])
     if not fg.empty:
         if "LABORATORIO" in fg.columns:
             st.subheader("Por Concepto")
@@ -386,7 +375,7 @@ elif vista == "💰 Ingresos Servicios":
     st.header("💰 Ingresos Servicios")
     fsi=filtrar(df_servicios)
     total=fsi["BASE_IMPONIBLE"].sum() if not fsi.empty and "BASE_IMPONIBLE" in fsi.columns else 0
-    kpi_row([("Total Base Imponible", fmtk(total), "kpi-ingresos")])
+    kpi_row([("Total Base Imponible", fmtk(total))])
     if not fsi.empty:
         if "CLIENTE" in fsi.columns:
             st.subheader("Por Cliente")
@@ -408,7 +397,7 @@ elif vista == "🤝 Ingresos Alliance":
     st.header("🤝 Ingresos Alliance")
     fal=filtrar(df_alliance)
     total=fal["BASE_IMPONIBLE"].sum() if not fal.empty and "BASE_IMPONIBLE" in fal.columns else 0
-    kpi_row([("Total Base Imponible", fmtk(total), "kpi-ingresos")])
+    kpi_row([("Total Base Imponible", fmtk(total))])
     if not fal.empty:
         if "FARMACIA" in fal.columns:
             st.subheader("Por Farmacia")
@@ -428,7 +417,7 @@ elif vista == "🤝 Ingresos Alliance":
 
 elif vista == "🏦 Banco":
     st.header("🏦 Banco · Santander")
-    kpi_row([("🏦 Saldo Actual", fmtk(saldo_banco), "kpi-banco")])
+    kpi_row([("🏦 Saldo Actual", fmtk(saldo_banco))])
     fb=filtrar(df_banco)
     if not fb.empty:
         st.dataframe(fb.loc[:,~fb.columns.duplicated()], use_container_width=True, hide_index=True)
@@ -520,11 +509,10 @@ elif vista == "📅 Forecast":
 
         delta_60 = saldo_fin - float(saldo_banco)
         kpi_row([
-            ("🏦 Saldo Banco Hoy",    fmtk(saldo_banco),    "kpi-banco"),
-            ("💰 Cobros pendientes",  fmtk(cobros_pend),    "kpi-ingresos"),
-            ("💸 Pagos pendientes",   fmtk(abs(pagos_pend)),"kpi-gastos"),
-            ("📊 Saldo estimado 60d", fmtk(saldo_fin),      "kpi-resultado",
-             fmtk(delta_60) if delta_60 != 0 else None),
+            ("🏦 Saldo Banco Hoy",    fmtk(saldo_banco)),
+            ("💰 Cobros pendientes",  fmtk(cobros_pend)),
+            ("💸 Pagos pendientes",   fmtk(abs(pagos_pend))),
+            ("📊 Saldo estimado 60d", fmtk(saldo_fin), fmtk(delta_60) if delta_60 != 0 else None),
         ])
 
         if n_vencidos > 0:
