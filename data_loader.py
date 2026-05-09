@@ -135,6 +135,31 @@ def load_ingresos_alliance():
         print(f"Error alliance: {e}")
         return pd.DataFrame()
 
+def load_gastos_personal():
+    """Devuelve {año: [m1..m12]} con el gasto laboral mensual (valores positivos).
+    La hoja tiene formato pivot: fila 'Gastos de personal' es el total,
+    columnas C-N son los meses Ene-Dic."""
+    gc = get_client()
+    ss = gc.open_by_key(SHEET1_ID)
+    try:
+        raw = ss.worksheet("GASTOS PERSONAL").get_all_values()
+        result = {}
+        for row in raw[1:]:
+            if len(row) < 3: continue
+            concepto = row[0].strip()
+            if concepto == "": continue
+            try:
+                year = int(row[1])
+            except:
+                continue
+            monthly = [abs(safe_float(row[i])) if i < len(row) else 0.0 for i in range(2, 14)]
+            if concepto == "Gastos de personal":
+                result[year] = monthly
+        return result
+    except Exception as e:
+        print(f"Error GASTOS PERSONAL: {e}")
+        return {}
+
 def load_banco():
     gc = get_client()
     ss = gc.open_by_key(SHEET2_ID)

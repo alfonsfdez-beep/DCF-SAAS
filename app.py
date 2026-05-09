@@ -24,7 +24,7 @@ from datetime import datetime
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from data_loader import (load_compras, load_gastos, load_ingresos_servicios,
-                         load_ingresos_alliance, load_banco)
+                         load_ingresos_alliance, load_banco, load_gastos_personal)
 
 
 @st.cache_data(ttl=300)
@@ -35,9 +35,10 @@ def get_all_data():
     df_al = load_ingresos_alliance()
     raw_b = load_banco()
     df_b, saldo = raw_b if isinstance(raw_b, tuple) else (raw_b, 0.0)
-    return df_c, df_g, df_si, df_al, df_b, saldo
+    personal = load_gastos_personal()
+    return df_c, df_g, df_si, df_al, df_b, saldo, personal
 
-df_compras, df_gastos, df_servicios, df_alliance, df_banco, saldo_banco = get_all_data()
+df_compras, df_gastos, df_servicios, df_alliance, df_banco, saldo_banco, gastos_personal = get_all_data()
 
 hoy = datetime.today()
 MESES = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",
@@ -168,10 +169,11 @@ elif vista == "📈 P&G":
     alliance_m  = mes_serie(df_alliance)
     compras_m   = mes_serie(df_compras)
     gastos_m    = mes_serie(df_gastos)
+    personal_m  = gastos_personal.get(int(anio_sel), [0.0] * 12)
 
-    ingresos_m  = [s + a for s, a in zip(servicios_m, alliance_m)]
-    total_gasto_m = [c + g for c, g in zip(compras_m, gastos_m)]
-    resultado_m = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
+    ingresos_m    = [s + a for s, a in zip(servicios_m, alliance_m)]
+    total_gasto_m = [c + g + p for c, g, p in zip(compras_m, gastos_m, personal_m)]
+    resultado_m   = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
 
     def fila(valores, negrita=False):
         total = sum(valores)
@@ -181,11 +183,13 @@ elif vista == "📈 P&G":
     # ── KPIs resumen ──────────────────────────────────────────────────────────
     ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
     tga = tc + tg; res = ti - tga
-    k1, k2, k3, k4 = st.columns(4)
+    tp = sum(personal_m)
+    k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("💰 Ingresos Totales", fmtk(ti))
     k2.metric("🛒 Compras", fmtk(tc))
     k3.metric("📋 Gastos", fmtk(tg))
-    k4.metric("📈 Resultado", fmtk(res), delta=fmtk(res))
+    k4.metric("👥 Personal", fmtk(tp))
+    k5.metric("📈 Resultado", fmtk(res), delta=fmtk(res))
 
     st.markdown("---")
 
@@ -204,6 +208,7 @@ elif vista == "📈 P&G":
         build_row("TOTAL INGRESOS",  ingresos_m),
         build_row("Compras",         compras_m),
         build_row("Gastos",          gastos_m),
+        build_row("Personal",        personal_m),
         build_row("TOTAL GASTOS",    total_gasto_m),
         build_row("RESULTADO",       resultado_m),
     ]
@@ -235,12 +240,14 @@ elif vista == "📈 P&G":
     # ── Gráfico mensual ───────────────────────────────────────────────────────
     st.subheader("Evolución mensual")
     fig = go.Figure()
-    fig.add_trace(go.Bar(name="Ingresos", x=MESES_L, y=ingresos_m,
+    fig.add_trace(go.Bar(name="Ingresos",  x=MESES_L, y=ingresos_m,
                          marker_color="#2ecc71", opacity=0.85))
-    fig.add_trace(go.Bar(name="Compras",  x=MESES_L, y=compras_m,
+    fig.add_trace(go.Bar(name="Compras",   x=MESES_L, y=compras_m,
                          marker_color="#3498db", opacity=0.85))
-    fig.add_trace(go.Bar(name="Gastos",   x=MESES_L, y=gastos_m,
+    fig.add_trace(go.Bar(name="Gastos",    x=MESES_L, y=gastos_m,
                          marker_color="#e67e22", opacity=0.85))
+    fig.add_trace(go.Bar(name="Personal",  x=MESES_L, y=personal_m,
+                         marker_color="#9b59b6", opacity=0.85))
     fig.add_trace(go.Scatter(name="Resultado", x=MESES_L, y=resultado_m,
                              mode="lines+markers",
                              line=dict(color="#8e44ad", width=3),
