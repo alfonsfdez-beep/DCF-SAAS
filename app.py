@@ -143,7 +143,9 @@ if not st.session_state.get("authenticated"):
     with col_c:
         st.markdown("<div style='height:5vh'></div>", unsafe_allow_html=True)
         if os.path.exists(LOGO_PATH):
-            st.image(LOGO_PATH, width=200)
+            _, img_c, _ = st.columns([1, 2, 1])
+            with img_c:
+                st.image(LOGO_PATH, use_column_width=True)
         else:
             st.markdown("## 💊 DCFarma")
         st.markdown(
@@ -231,24 +233,13 @@ with st.sidebar:
             anios_set.update([int(a) for a in _df["ANO"].dropna().unique()])
     anios = sorted(anios_set, reverse=True) or [hoy.year]
     anio_sel = st.selectbox("Año", anios, index=0)
-    st.markdown("<p style='font-size:0.75rem;color:#aaa;margin-bottom:4px'>Mes(es)</p>", unsafe_allow_html=True)
     meses_def = list(range(1, min(hoy.month+1,13))) if int(anio_sel)==hoy.year else list(range(1,13))
-    if "mes_sel" not in st.session_state:
-        st.session_state["mes_sel"] = meses_def
-    col_a, col_b = st.columns(2)
-    if col_a.button("Todos", use_container_width=True, key="mes_todos"):
-        st.session_state["mes_sel"] = list(range(1,13))
-        st.rerun()
-    if col_b.button("Ninguno", use_container_width=True, key="mes_ninguno"):
-        st.session_state["mes_sel"] = []
-        st.rerun()
-    mes_sel = []
-    for m in range(1, 13):
-        checked = m in st.session_state["mes_sel"]
-        val = st.checkbox(MESES[m], value=checked, key=f"mes_cb_{m}")
-        if val:
-            mes_sel.append(m)
-    st.session_state["mes_sel"] = mes_sel
+    mes_sel = st.multiselect(
+        "Mes(es)", options=list(range(1, 13)),
+        default=meses_def,
+        format_func=lambda m: MESES[m],
+        key="mes_multi",
+    )
     st.markdown("---")
     if st.button("🔄 Actualizar datos", use_container_width=True):
         st.cache_data.clear()
@@ -257,6 +248,17 @@ with st.sidebar:
     if st.button("🚪 Cerrar sesión", use_container_width=True, key="logout"):
         st.session_state.clear()
         st.rerun()
+
+def to_excel(df):
+    import io
+    buf = io.BytesIO()
+    df.to_excel(buf, index=False, engine="openpyxl")
+    return buf.getvalue()
+
+def dl_excel(df, filename):
+    st.download_button("⬇️ Exportar Excel", data=to_excel(df),
+                       file_name=filename, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       use_container_width=False)
 
 def filtrar(df):
     if df is None or df.empty: return pd.DataFrame()
@@ -456,7 +458,9 @@ elif vista == "Compras":
         for dc in ["FECHA_FACTURA","FECHA_VTO","FECHA_PAGO"]:
             if dc in show.columns: show[dc]=show[dc].apply(fdate)
         if "BASE_IMPONIBLE" in show.columns: show["BASE_IMPONIBLE"]=show["BASE_IMPONIBLE"].apply(fmt)
-        st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
+        show=show.loc[:,~show.columns.duplicated()]
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        dl_excel(show, f"compras_{anio_sel}.xlsx")
     else: st.info("Sin datos para el periodo seleccionado")
 
 elif vista == "Gastos":
@@ -478,7 +482,9 @@ elif vista == "Gastos":
         for dc in ["FECHA_FACTURA","FECHA_VTO","FECHA_PAGO"]:
             if dc in show.columns: show[dc]=show[dc].apply(fdate)
         if "BASE_IMPONIBLE" in show.columns: show["BASE_IMPONIBLE"]=show["BASE_IMPONIBLE"].apply(fmt)
-        st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
+        show=show.loc[:,~show.columns.duplicated()]
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        dl_excel(show, f"gastos_{anio_sel}.xlsx")
     else: st.info("Sin datos para el periodo seleccionado")
 
 elif vista == "Ingresos Servicios":
@@ -500,7 +506,9 @@ elif vista == "Ingresos Servicios":
         for dc in ["FECHA_FACTURA","FECHA_VTO","FECHA_COBRO"]:
             if dc in show.columns: show[dc]=show[dc].apply(fdate)
         if "BASE_IMPONIBLE" in show.columns: show["BASE_IMPONIBLE"]=show["BASE_IMPONIBLE"].apply(fmt)
-        st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
+        show=show.loc[:,~show.columns.duplicated()]
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        dl_excel(show, f"servicios_{anio_sel}.xlsx")
     else: st.info("Sin datos para el periodo seleccionado")
 
 elif vista == "Ingresos Alliance":
@@ -522,7 +530,9 @@ elif vista == "Ingresos Alliance":
         for dc in ["FECHA_FACTURA","FECHA_VTO","FECHA_COBRO"]:
             if dc in show.columns: show[dc]=show[dc].apply(fdate)
         if "BASE_IMPONIBLE" in show.columns: show["BASE_IMPONIBLE"]=show["BASE_IMPONIBLE"].apply(fmt)
-        st.dataframe(show.loc[:,~show.columns.duplicated()], use_container_width=True, hide_index=True)
+        show=show.loc[:,~show.columns.duplicated()]
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        dl_excel(show, f"alliance_{anio_sel}.xlsx")
     else: st.info("Sin datos para el periodo seleccionado")
 
 elif vista == "Banco":
@@ -530,7 +540,9 @@ elif vista == "Banco":
     kpi_row([("🏦 Saldo Actual", fmtk(saldo_banco))])
     fb=filtrar(df_banco)
     if not fb.empty:
-        st.dataframe(fb.loc[:,~fb.columns.duplicated()], use_container_width=True, hide_index=True)
+        fb_show=fb.loc[:,~fb.columns.duplicated()]
+        st.dataframe(fb_show, use_container_width=True, hide_index=True)
+        dl_excel(fb_show, f"banco_{anio_sel}.xlsx")
     else: st.info("Sin movimientos para el periodo seleccionado")
 
 elif vista == "Forecast":
