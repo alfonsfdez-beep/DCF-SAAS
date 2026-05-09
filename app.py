@@ -11,42 +11,24 @@ CSS = """
 
 /* ── Sidebar ─────────────────────────────────────────── */
 [data-testid="stSidebar"] {
-    background: #0f2335;
+    background: #f4fafa;
+    border-right: 2px solid #c8e8e6;
     padding-top: 0.5rem;
 }
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] .stRadio label,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div {
-    color: #cfe4f0 !important;
-}
-[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
-    font-size: 0.95rem;
-    font-weight: 500;
-}
-[data-testid="stSidebar"] hr {border-color: #1e3a52;}
-[data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] .stCheckbox label {color: #cfe4f0 !important;}
-[data-testid="stSidebar"] [data-baseweb="select"] {
-    background: #1a3a50 !important;
-    border-color: #2a5070 !important;
-}
-[data-testid="stSidebar"] [data-baseweb="select"] * {color: #fff !important;}
+[data-testid="stSidebar"] hr {border-color: #c8e8e6;}
 
 /* ── Metric cards ────────────────────────────────────── */
-.kpi-row {display: flex; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap;}
 .kpi-card {
-    flex: 1; min-width: 140px;
     background: #fff;
     border-radius: 10px;
-    padding: 1rem 1.2rem 0.8rem;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    padding: 1rem 1.2rem 0.9rem;
+    box-shadow: 0 1px 8px rgba(74,173,168,0.10);
     border-top: 3px solid #4AADA8;
+    margin-bottom: 0.5rem;
 }
-.kpi-label {font-size: 0.72rem; color: #6b7f8e; font-weight: 600;
-            letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.35rem;}
-.kpi-value {font-size: 1.55rem; font-weight: 700; color: #0f2335; white-space: nowrap;}
+.kpi-label {font-size: 0.70rem; color: #7a9ea0; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.3rem;}
+.kpi-value {font-size: 1.5rem; font-weight: 700; color: #1a3a3a; white-space: nowrap;}
 .kpi-delta {font-size: 0.78rem; margin-top: 0.2rem;}
 .kpi-delta.pos {color: #27ae60;} .kpi-delta.neg {color: #e74c3c;}
 
@@ -60,7 +42,7 @@ CSS = """
 
 /* ── General ─────────────────────────────────────────── */
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
-h1, h2, h3 {color: #0f2335;}
+h1, h2, h3 {color: #1a3a3a;}
 </style>
 """
 
@@ -69,12 +51,20 @@ def kpi(label, value, css_class="", delta=None):
     if delta is not None:
         neg = str(delta).startswith("-")
         delta_html = f'<div class="kpi-delta {"neg" if neg else "pos"}">{"▼" if neg else "▲"} {delta}</div>'
-    return f"""
-    <div class="kpi-card {css_class}">
+    return f"""<div class="kpi-card {css_class}">
         <div class="kpi-label">{label}</div>
         <div class="kpi-value">{value}</div>
         {delta_html}
     </div>"""
+
+def kpi_row(items):
+    """items = list of (label, value, css_class) o (label, value, css_class, delta)"""
+    cols = st.columns(len(items))
+    for col, item in zip(cols, items):
+        label, value, css_class = item[0], item[1], item[2]
+        delta = item[3] if len(item) > 3 else None
+        with col:
+            st.markdown(kpi(label, value, css_class, delta), unsafe_allow_html=True)
 
 USERS = {"Admin": "12341234Aa$$"}
 
@@ -196,22 +186,18 @@ if vista == "📊 Dashboard":
     tc=s(fc); tg=s(fg); tsi=s(fsi); tal=s(fal)
     ti=tsi+tal; tga=tc+tg; res=ti-tga
 
-    st.markdown(
-        '<div class="kpi-row">'
-        + kpi("💰 Ingresos Totales", fmtk(ti), "kpi-ingresos")
-        + kpi("🛒 Compras", fmtk(tc), "kpi-compras")
-        + kpi("📋 Gastos", fmtk(tg), "kpi-gastos")
-        + kpi("📈 Resultado", fmtk(res), "kpi-resultado",
-              delta=fmtk(res) if res != 0 else None)
-        + '</div>', unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="kpi-row">'
-        + kpi("Ingresos Servicios", fmtk(tsi), "kpi-ingresos")
-        + kpi("Ingresos Alliance", fmtk(tal), "kpi-ingresos")
-        + kpi("Total Gastos", fmtk(tga), "kpi-gastos")
-        + kpi("🏦 Saldo Banco", fmtk(saldo_banco), "kpi-banco")
-        + '</div>', unsafe_allow_html=True)
+    kpi_row([
+        ("💰 Ingresos Totales", fmtk(ti),  "kpi-ingresos", fmtk(res) if res != 0 else None),
+        ("🛒 Compras",          fmtk(tc),  "kpi-compras"),
+        ("📋 Gastos",           fmtk(tg),  "kpi-gastos"),
+        ("📈 Resultado",        fmtk(res), "kpi-resultado", fmtk(res) if res != 0 else None),
+    ])
+    kpi_row([
+        ("Ingresos Servicios", fmtk(tsi),        "kpi-ingresos"),
+        ("Ingresos Alliance",  fmtk(tal),         "kpi-ingresos"),
+        ("Total Gastos",       fmtk(tga),         "kpi-gastos"),
+        ("🏦 Saldo Banco",     fmtk(saldo_banco), "kpi-banco"),
+    ])
 
     st.markdown("---")
     st.subheader("Evolución mensual")
@@ -274,15 +260,13 @@ elif vista == "📈 P&G":
     ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
     tga = tc + tg + sum(personal_m); res = ti - tga
     tp = sum(personal_m)
-    st.markdown(
-        '<div class="kpi-row">'
-        + kpi("💰 Ingresos Totales", fmtk(ti), "kpi-ingresos")
-        + kpi("🛒 Compras", fmtk(tc), "kpi-compras")
-        + kpi("📋 Gastos", fmtk(tg), "kpi-gastos")
-        + kpi("👥 Personal", fmtk(tp), "kpi-personal")
-        + kpi("📈 Resultado", fmtk(res), "kpi-resultado",
-              delta=fmtk(res) if res != 0 else None)
-        + '</div>', unsafe_allow_html=True)
+    kpi_row([
+        ("💰 Ingresos Totales", fmtk(ti),  "kpi-ingresos"),
+        ("🛒 Compras",          fmtk(tc),  "kpi-compras"),
+        ("📋 Gastos",           fmtk(tg),  "kpi-gastos"),
+        ("👥 Personal",         fmtk(tp),  "kpi-personal"),
+        ("📈 Resultado",        fmtk(res), "kpi-resultado", fmtk(res) if res != 0 else None),
+    ])
 
     st.markdown("---")
 
@@ -358,7 +342,7 @@ elif vista == "🛒 Compras":
     st.header("🛒 Compras")
     fc=filtrar(df_compras)
     total=fc["BASE_IMPONIBLE"].sum() if not fc.empty and "BASE_IMPONIBLE" in fc.columns else 0
-    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-compras") + '</div>', unsafe_allow_html=True)
+    kpi_row([("Total Base Imponible", fmtk(total), "kpi-compras")])
     if not fc.empty:
         if "LABORATORIO" in fc.columns:
             st.subheader("Por Proveedor")
@@ -380,7 +364,7 @@ elif vista == "📋 Gastos":
     st.header("📋 Gastos")
     fg=filtrar(df_gastos)
     total=fg["BASE_IMPONIBLE"].sum() if not fg.empty and "BASE_IMPONIBLE" in fg.columns else 0
-    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-gastos") + '</div>', unsafe_allow_html=True)
+    kpi_row([("Total Base Imponible", fmtk(total), "kpi-gastos")])
     if not fg.empty:
         if "LABORATORIO" in fg.columns:
             st.subheader("Por Concepto")
@@ -402,7 +386,7 @@ elif vista == "💰 Ingresos Servicios":
     st.header("💰 Ingresos Servicios")
     fsi=filtrar(df_servicios)
     total=fsi["BASE_IMPONIBLE"].sum() if not fsi.empty and "BASE_IMPONIBLE" in fsi.columns else 0
-    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-ingresos") + '</div>', unsafe_allow_html=True)
+    kpi_row([("Total Base Imponible", fmtk(total), "kpi-ingresos")])
     if not fsi.empty:
         if "CLIENTE" in fsi.columns:
             st.subheader("Por Cliente")
@@ -424,7 +408,7 @@ elif vista == "🤝 Ingresos Alliance":
     st.header("🤝 Ingresos Alliance")
     fal=filtrar(df_alliance)
     total=fal["BASE_IMPONIBLE"].sum() if not fal.empty and "BASE_IMPONIBLE" in fal.columns else 0
-    st.markdown('<div class="kpi-row">' + kpi("Total Base Imponible", fmtk(total), "kpi-ingresos") + '</div>', unsafe_allow_html=True)
+    kpi_row([("Total Base Imponible", fmtk(total), "kpi-ingresos")])
     if not fal.empty:
         if "FARMACIA" in fal.columns:
             st.subheader("Por Farmacia")
@@ -444,7 +428,7 @@ elif vista == "🤝 Ingresos Alliance":
 
 elif vista == "🏦 Banco":
     st.header("🏦 Banco · Santander")
-    st.markdown('<div class="kpi-row">' + kpi("🏦 Saldo Actual", fmtk(saldo_banco), "kpi-banco") + '</div>', unsafe_allow_html=True)
+    kpi_row([("🏦 Saldo Actual", fmtk(saldo_banco), "kpi-banco")])
     fb=filtrar(df_banco)
     if not fb.empty:
         st.dataframe(fb.loc[:,~fb.columns.duplicated()], use_container_width=True, hide_index=True)
@@ -535,14 +519,13 @@ elif vista == "📅 Forecast":
         n_vencidos  = len(df_ev[df_ev["Estado"]=="Vencido"])
 
         delta_60 = saldo_fin - float(saldo_banco)
-        st.markdown(
-            '<div class="kpi-row">'
-            + kpi("🏦 Saldo Banco Hoy", fmtk(saldo_banco), "kpi-banco")
-            + kpi("💰 Cobros pendientes", fmtk(cobros_pend), "kpi-ingresos")
-            + kpi("💸 Pagos pendientes", fmtk(abs(pagos_pend)), "kpi-gastos")
-            + kpi("📊 Saldo estimado 60d", fmtk(saldo_fin), "kpi-resultado",
-                  delta=fmtk(delta_60) if delta_60 != 0 else None)
-            + '</div>', unsafe_allow_html=True)
+        kpi_row([
+            ("🏦 Saldo Banco Hoy",    fmtk(saldo_banco),    "kpi-banco"),
+            ("💰 Cobros pendientes",  fmtk(cobros_pend),    "kpi-ingresos"),
+            ("💸 Pagos pendientes",   fmtk(abs(pagos_pend)),"kpi-gastos"),
+            ("📊 Saldo estimado 60d", fmtk(saldo_fin),      "kpi-resultado",
+             fmtk(delta_60) if delta_60 != 0 else None),
+        ])
 
         if n_vencidos > 0:
             st.warning(f"⚠️ Tienes **{n_vencidos} evento(s) vencido(s)** sin registrar pago/cobro")
