@@ -78,6 +78,12 @@ CSS = """
 }
 .kpi-delta { display: block; font-size: 0.78rem; margin-top: 0.2rem; }
 
+/* ── Ocultar botón CSV nativo del dataframe ───────────── */
+[data-testid="stElementToolbar"] button[title="Download as CSV"],
+[data-testid="stElementToolbar"] button[aria-label="Download as CSV"] {
+    display: none !important;
+}
+
 /* ── General ─────────────────────────────────────────── */
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
 h1, h2, h3 {color: #1a3a3a;}
@@ -234,12 +240,19 @@ with st.sidebar:
     anios = sorted(anios_set, reverse=True) or [hoy.year]
     anio_sel = st.selectbox("Año", anios, index=0)
     meses_def = list(range(1, min(hoy.month+1,13))) if int(anio_sel)==hoy.year else list(range(1,13))
-    mes_sel = st.multiselect(
-        "Mes(es)", options=list(range(1, 13)),
-        default=meses_def,
-        format_func=lambda m: MESES[m],
-        key="mes_multi",
-    )
+    if "mes_sel" not in st.session_state:
+        st.session_state["mes_sel"] = meses_def
+    _prev = st.session_state["mes_sel"]
+    _n = len(_prev)
+    _label = "Todos" if _n == 12 else (f"{_n} seleccionados" if _n > 0 else "Ninguno")
+    with st.expander(f"Mes(es) — {_label}"):
+        _todos = st.checkbox("Todos los meses", value=_n == 12, key="mes_todos_cb")
+        mes_sel = []
+        for m in range(1, 13):
+            _checked = True if _todos else (m in _prev)
+            if st.checkbox(MESES[m], value=_checked, key=f"mes_cb_{m}"):
+                mes_sel.append(m)
+    st.session_state["mes_sel"] = mes_sel
     st.markdown("---")
     if st.button("🔄 Actualizar datos", use_container_width=True):
         st.cache_data.clear()
