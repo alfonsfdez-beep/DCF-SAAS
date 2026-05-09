@@ -152,37 +152,36 @@ if vista == "📊 Dashboard":
         st.plotly_chart(fig2, use_container_width=True)
 
 elif vista == "📈 P&G":
+    meses_pg = sorted(mes_sel) if mes_sel else list(range(1, 13))
+    label_pg = f"meses seleccionados" if len(meses_pg) < 12 else "año completo"
     st.header(f"📈 Pérdidas y Ganancias · {anio_sel}")
-    st.caption("Vista anual completa — el filtro de meses no aplica aquí")
+    st.caption(f"Mostrando {len(meses_pg)} mes(es) — {label_pg}")
 
-    MESES_C = list(range(1, 13))
+    MESES_C = meses_pg
     MESES_L = [MESES[m][:3] for m in MESES_C]
 
     def mes_serie(df):
         if df is None or df.empty or "BASE_IMPONIBLE" not in df.columns:
-            return [0.0] * 12
+            return [0.0] * len(MESES_C)
         df_a = df[df["ANO"] == int(anio_sel)] if "ANO" in df.columns else df
         return [float(df_a[df_a["MES"] == m]["BASE_IMPONIBLE"].sum()) if "MES" in df_a.columns else 0.0
                 for m in MESES_C]
+
+    personal_anual = gastos_personal.get(int(anio_sel), [0.0] * 12)
 
     servicios_m = mes_serie(df_servicios)
     alliance_m  = mes_serie(df_alliance)
     compras_m   = mes_serie(df_compras)
     gastos_m    = mes_serie(df_gastos)
-    personal_m  = gastos_personal.get(int(anio_sel), [0.0] * 12)
+    personal_m  = [personal_anual[m - 1] for m in MESES_C]
 
     ingresos_m    = [s + a for s, a in zip(servicios_m, alliance_m)]
     total_gasto_m = [c + g + p for c, g, p in zip(compras_m, gastos_m, personal_m)]
     resultado_m   = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
 
-    def fila(valores, negrita=False):
-        total = sum(valores)
-        celdas = [fmt(v) for v in valores] + [fmt(total)]
-        return celdas
-
     # ── KPIs resumen ──────────────────────────────────────────────────────────
     ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
-    tga = tc + tg; res = ti - tga
+    tga = tc + tg + sum(personal_m); res = ti - tga
     tp = sum(personal_m)
     k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("💰 Ingresos Totales", fmtk(ti))
@@ -194,12 +193,10 @@ elif vista == "📈 P&G":
     st.markdown("---")
 
     # ── Tabla P&G ─────────────────────────────────────────────────────────────
-    cols_tabla = MESES_L + ["TOTAL"]
-
     def build_row(label, valores):
         total = sum(valores)
         return {"Concepto": label,
-                **{MESES_L[i]: fmt(valores[i]) for i in range(12)},
+                **{MESES_L[i]: fmt(valores[i]) for i in range(len(MESES_C))},
                 "TOTAL": fmt(total)}
 
     filas = [
