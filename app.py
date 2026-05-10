@@ -320,15 +320,27 @@ if vista == "Dashboard":
         if df is None or df.empty or "MES" not in df.columns or "BASE_IMPONIBLE" not in df.columns: return [0]*12
         return [df[(df["ANO"]==int(anio_sel))&(df["MES"]==m)]["BASE_IMPONIBLE"].sum()
                 if "ANO" in df.columns else df[df["MES"]==m]["BASE_IMPONIBLE"].sum() for m in meses_c]
+    _ms_si=ms(df_servicios); _ms_al=ms(df_alliance)
+    _ms_co=ms(df_compras);   _ms_ga=ms(df_gastos)
+    _ms_res=[(_ms_si[i]+_ms_al[i])-(_ms_co[i]+_ms_ga[i]) for i in range(12)]
     fig=go.Figure()
-    fig.add_trace(go.Bar(name="Servicios",x=lm,y=ms(df_servicios),marker_color="#2ecc71"))
-    fig.add_trace(go.Bar(name="Alliance",x=lm,y=ms(df_alliance),marker_color="#27ae60"))
-    fig.add_trace(go.Bar(name="Compras",x=lm,y=ms(df_compras),marker_color="#3498db"))
-    fig.add_trace(go.Bar(name="Gastos",x=lm,y=ms(df_gastos),marker_color="#e67e22"))
+    fig.add_trace(go.Bar(name="Servicios",x=lm,y=_ms_si,marker_color="#2ecc71"))
+    fig.add_trace(go.Bar(name="Alliance",x=lm,y=_ms_al,marker_color="#27ae60"))
+    fig.add_trace(go.Bar(name="Compras",x=lm,y=_ms_co,marker_color="#3498db"))
+    fig.add_trace(go.Bar(name="Gastos",x=lm,y=_ms_ga,marker_color="#e67e22"))
+    fig.add_trace(go.Scatter(
+        name="Resultado", x=lm, y=_ms_res,
+        mode="lines+markers",
+        line=dict(color="#8e44ad", width=3),
+        marker=dict(size=8, color=["#27ae60" if v>=0 else "#e74c3c" for v in _ms_res],
+                    line=dict(width=2, color="#8e44ad")),
+        hovertemplate="<b>%{x}</b><br>Resultado: %{y:,.0f} €<extra></extra>",
+    ))
     fig.update_layout(barmode="group",height=380,margin=dict(l=0,r=0,t=30,b=0),
                       plot_bgcolor="white",paper_bgcolor="white",
                       legend=dict(orientation="h",yanchor="bottom",y=1.02,x=0),
-                      yaxis=dict(showgrid=True,gridcolor="#f0f0f0"))
+                      yaxis=dict(showgrid=True,gridcolor="#f0f0f0"),
+                      hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
     if not fc.empty and "LABORATORIO" in fc.columns:
