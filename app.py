@@ -422,7 +422,51 @@ elif vista == "P&G":
     except AttributeError:
         styled = base_style.applymap(color_resultado, subset=pd.IndexSlice[["RESULTADO"], :])
 
-    st.dataframe(styled, use_container_width=True)
+    # Tabla con selección de fila para drill-down
+    DRILLABLE = {"Servicios", "Alliance", "Compras", "Gastos"}
+    try:
+        ev = st.dataframe(styled, use_container_width=True,
+                          on_select="rerun", selection_mode="single-row")
+        sel_rows = ev.selection.rows if ev and hasattr(ev, "selection") else []
+    except Exception:
+        st.dataframe(styled, use_container_width=True)
+        sel_rows = []
+
+    concepto_clicked = df_pg.index[sel_rows[0]] if sel_rows else None
+
+    # Selector manual como fallback / complemento
+    drill_opts = ["— selecciona un concepto —"] + sorted(DRILLABLE)
+    drill_sel = st.selectbox("🔍 Desglose de apuntes", drill_opts,
+                             index=0, key="pyg_drill", label_visibility="collapsed")
+    concepto_drill = concepto_clicked if (concepto_clicked in DRILLABLE) else \
+                     (drill_sel if drill_sel != "— selecciona un concepto —" else None)
+
+    if concepto_drill:
+        st.markdown(f"#### 📂 Desglose · {concepto_drill}")
+        _map = {
+            "Servicios": (df_servicios, ["DESCRIPCION","CLIENTE","BASE_IMPONIBLE",
+                                         "FECHA_FACTURA","FECHA_VTO","FECHA_COBRO"], "DESCRIPCION"),
+            "Alliance":  (df_alliance,  ["DESCRIPCION","FARMACIA","BASE_IMPONIBLE",
+                                         "FECHA_FACTURA","FECHA_VTO","FECHA_COBRO"], "DESCRIPCION"),
+            "Compras":   (df_compras,   ["LABORATORIO","FARMACIA","NUM_FACTURA",
+                                         "BASE_IMPONIBLE","FECHA_FACTURA","FECHA_PAGO"], "LABORATORIO"),
+            "Gastos":    (df_gastos,    ["LABORATORIO","NUM_FACTURA","BASE_IMPONIBLE",
+                                         "FECHA_FACTURA","FECHA_PAGO"], "LABORATORIO"),
+        }
+        _src, _cols, _sort_col = _map[concepto_drill]
+        _df_drill = filtrar(_src)
+        if not _df_drill.empty:
+            _cols_ok = [c for c in _cols if c in _df_drill.columns]
+            _show_d = _df_drill[_cols_ok].copy()
+            for dc in ["FECHA_FACTURA","FECHA_VTO","FECHA_PAGO","FECHA_COBRO"]:
+                if dc in _show_d.columns: _show_d[dc] = _show_d[dc].apply(fdate)
+            if "BASE_IMPONIBLE" in _show_d.columns:
+                _show_d["BASE_IMPONIBLE"] = _show_d["BASE_IMPONIBLE"].apply(fmt)
+            if _sort_col in _show_d.columns:
+                _show_d = _show_d.sort_values(_sort_col)
+            st.dataframe(_show_d.reset_index(drop=True), use_container_width=True, hide_index=True)
+        else:
+            st.info("Sin apuntes para el periodo seleccionado.")
 
     st.markdown("---")
 
