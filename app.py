@@ -479,7 +479,10 @@ elif vista == "P&G":
                 except: pass
                 return ""
 
-            _pivot_fmt = _pivot_full.applymap(fmt)
+            try:
+                _pivot_fmt = _pivot_full.map(fmt)
+            except AttributeError:
+                _pivot_fmt = _pivot_full.applymap(fmt)
             _styled_pivot = (
                 _pivot_fmt.style
                 .set_properties(**{"text-align": "right", "font-size": "0.83rem"})
