@@ -736,6 +736,11 @@ elif vista == "Forecast":
         saldo_acum = float(saldo_banco)
         timeline_fechas  = [hoy_fc]
         timeline_saldos  = [saldo_acum]
+
+        # Totales diarios para el tooltip
+        _daily_cobros = df_ev[df_ev["Tipo"]=="COBRO"].groupby("Fecha")["Importe"].sum()
+        _daily_pagos  = df_ev[df_ev["Tipo"]=="PAGO"].groupby("Fecha")["Importe"].sum().abs()
+
         for fecha in fechas_unicas:
             movs = df_ev[df_ev["Fecha"]==fecha]["Importe"].sum()
             saldo_acum += movs
@@ -745,6 +750,13 @@ elif vista == "Forecast":
         if fin_fc not in timeline_fechas:
             timeline_fechas.append(fin_fc)
             timeline_saldos.append(saldo_acum)
+
+        # customdata del cashflow: [saldo_fmt, cobros_dia_fmt, pagos_dia_fmt]
+        _cf_customdata = []
+        for _f, _s in zip(timeline_fechas, timeline_saldos):
+            _c = _daily_cobros.get(_f, 0)
+            _p = _daily_pagos.get(_f, 0)
+            _cf_customdata.append([fmtk(_s), fmtk(_c), fmtk(_p)])
 
         fig = go.Figure()
 
@@ -757,6 +769,14 @@ elif vista == "Forecast":
             marker=dict(size=7, color="#8e44ad"),
             fill="tozeroy",
             fillcolor="rgba(142,68,173,0.08)",
+            customdata=_cf_customdata,
+            hovertemplate=(
+                "<b>%{x|%d/%m/%Y}</b><br>"
+                "Cashflow acumulado: <b>%{customdata[0]}</b><br>"
+                "Ingresos del día: <span style='color:#27ae60'>+%{customdata[1]}</span><br>"
+                "Gastos del día: <span style='color:#e74c3c'>-%{customdata[2]}</span>"
+                "<extra></extra>"
+            ),
         ))
 
         # Puntos de cobros (verde) encima de la línea
@@ -771,8 +791,7 @@ elif vista == "Forecast":
                 text=cobros_df["Importe"].apply(lambda v: fmtk(v)),
                 textposition="top center",
                 textfont=dict(size=9, color="#27ae60"),
-                customdata=cobros_df[["Contraparte","Estado","Origen"]].values,
-                hovertemplate="<b>%{customdata[0]}</b><br>%{x}<br>+%{text}<br>%{customdata[1]} · %{customdata[2]}<extra></extra>",
+                hoverinfo="skip",
                 yaxis="y2",
             ))
 
@@ -788,8 +807,7 @@ elif vista == "Forecast":
                 text=pagos_df["Importe"].abs().apply(lambda v: fmtk(v)),
                 textposition="bottom center",
                 textfont=dict(size=9, color="#e74c3c"),
-                customdata=pagos_df[["Contraparte","Estado","Origen"]].values,
-                hovertemplate="<b>%{customdata[0]}</b><br>%{x}<br>-%{text}<br>%{customdata[1]} · %{customdata[2]}<extra></extra>",
+                hoverinfo="skip",
                 yaxis="y2",
             ))
 
@@ -808,7 +826,7 @@ elif vista == "Forecast":
         fig.update_layout(
             height=450, margin=dict(l=0,r=0,t=30,b=0),
             plot_bgcolor="white", paper_bgcolor="white",
-            hovermode="x unified",
+            hovermode="x",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
             xaxis=dict(showgrid=True, gridcolor="#f0f0f0",
                        range=[str(hoy_fc - dt.timedelta(days=2)), str(fin_fc + dt.timedelta(days=2))],
