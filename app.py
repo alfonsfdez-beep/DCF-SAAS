@@ -443,28 +443,54 @@ elif vista == "P&G":
 
     if concepto_drill:
         st.markdown(f"#### 📂 Desglose · {concepto_drill}")
-        _map = {
-            "Servicios": (df_servicios, ["DESCRIPCION","CLIENTE","BASE_IMPONIBLE",
-                                         "FECHA_FACTURA","FECHA_VTO","FECHA_COBRO"], "DESCRIPCION"),
-            "Alliance":  (df_alliance,  ["DESCRIPCION","FARMACIA","BASE_IMPONIBLE",
-                                         "FECHA_FACTURA","FECHA_VTO","FECHA_COBRO"], "DESCRIPCION"),
-            "Compras":   (df_compras,   ["LABORATORIO","FARMACIA","NUM_FACTURA",
-                                         "BASE_IMPONIBLE","FECHA_FACTURA","FECHA_PAGO"], "LABORATORIO"),
-            "Gastos":    (df_gastos,    ["LABORATORIO","NUM_FACTURA","BASE_IMPONIBLE",
-                                         "FECHA_FACTURA","FECHA_PAGO"], "LABORATORIO"),
+        _src_map = {
+            "Servicios": (df_servicios, "DESCRIPCION"),
+            "Alliance":  (df_alliance,  "DESCRIPCION"),
+            "Compras":   (df_compras,   "LABORATORIO"),
+            "Gastos":    (df_gastos,    "LABORATORIO"),
         }
-        _src, _cols, _sort_col = _map[concepto_drill]
-        _df_drill = filtrar(_src)
-        if not _df_drill.empty:
-            _cols_ok = [c for c in _cols if c in _df_drill.columns]
-            _show_d = _df_drill[_cols_ok].copy()
-            for dc in ["FECHA_FACTURA","FECHA_VTO","FECHA_PAGO","FECHA_COBRO"]:
-                if dc in _show_d.columns: _show_d[dc] = _show_d[dc].apply(fdate)
-            if "BASE_IMPONIBLE" in _show_d.columns:
-                _show_d["BASE_IMPONIBLE"] = _show_d["BASE_IMPONIBLE"].apply(fmt)
-            if _sort_col in _show_d.columns:
-                _show_d = _show_d.sort_values(_sort_col)
-            st.dataframe(_show_d.reset_index(drop=True), use_container_width=True, hide_index=True)
+        _src, _sort_col = _src_map[concepto_drill]
+        # Filtrar solo por año (no por mes) para mostrar todos los meses del año en el pivot
+        _df_drill = _src.copy() if not _src.empty else pd.DataFrame()
+        if not _df_drill.empty and "ANO" in _df_drill.columns:
+            _df_drill = _df_drill[_df_drill["ANO"] == int(anio_sel)]
+        if not _df_drill.empty and _sort_col in _df_drill.columns and "MES" in _df_drill.columns:
+            # Pivot: filas=proveedor/concepto, columnas=meses seleccionados, valores=suma BASE_IMPONIBLE
+            _pivot = (
+                _df_drill.groupby([_sort_col, "MES"])["BASE_IMPONIBLE"]
+                .sum()
+                .unstack(fill_value=0)
+            )
+            # Solo columnas de los meses seleccionados (que existan en el pivot)
+            _meses_pivot = [m for m in MESES_C if m in _pivot.columns]
+            _pivot = _pivot.reindex(columns=_meses_pivot, fill_value=0)
+            _pivot.columns = [MESES[m][:3] for m in _meses_pivot]
+            _pivot["TOTAL"] = _pivot.sum(axis=1)
+            _pivot = _pivot.sort_index()
+            # Fila de totales
+            _total_row = pd.DataFrame([_pivot.sum(axis=0)], index=["TOTAL"])
+            _pivot_full = pd.concat([_pivot, _total_row])
+
+            def _color_drill(val):
+                try:
+                    v = float(str(val).replace(".","").replace(",",".").replace("€","").strip())
+                    if v < 0: return "color:#e74c3c;font-weight:bold"
+                    if v > 0: return "color:#1a3a3a"
+                except: pass
+                return ""
+
+            _pivot_fmt = _pivot_full.applymap(fmt)
+            _styled_pivot = (
+                _pivot_fmt.style
+                .set_properties(**{"text-align": "right", "font-size": "0.83rem"})
+                .set_properties(subset=pd.IndexSlice[["TOTAL"], :],
+                                **{"font-weight": "bold", "background-color": "#f0f8f7"})
+            )
+            try:
+                _styled_pivot = _styled_pivot.map(_color_drill)
+            except AttributeError:
+                _styled_pivot = _styled_pivot.applymap(_color_drill)
+            st.dataframe(_styled_pivot, use_container_width=True)
         else:
             st.info("Sin apuntes para el periodo seleccionado.")
 
