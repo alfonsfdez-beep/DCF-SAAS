@@ -323,13 +323,19 @@ if vista == "Dashboard":
     _ms_si=ms(df_servicios); _ms_al=ms(df_alliance)
     _ms_co=ms(df_compras);   _ms_ga=ms(df_gastos)
     _ms_res=[(_ms_si[i]+_ms_al[i])-(_ms_co[i]+_ms_ga[i]) for i in range(12)]
+    # Solo meses con algún dato
+    _idx_con_datos=[i for i in range(12) if _ms_si[i]+_ms_al[i]+_ms_co[i]+_ms_ga[i]!=0]
+    _lm=[lm[i] for i in _idx_con_datos]
+    _ms_si=[_ms_si[i] for i in _idx_con_datos]; _ms_al=[_ms_al[i] for i in _idx_con_datos]
+    _ms_co=[_ms_co[i] for i in _idx_con_datos]; _ms_ga=[_ms_ga[i] for i in _idx_con_datos]
+    _ms_res=[_ms_res[i] for i in _idx_con_datos]
     fig=go.Figure()
-    fig.add_trace(go.Bar(name="Servicios",x=lm,y=_ms_si,marker_color="#2ecc71"))
-    fig.add_trace(go.Bar(name="Alliance",x=lm,y=_ms_al,marker_color="#27ae60"))
-    fig.add_trace(go.Bar(name="Compras",x=lm,y=_ms_co,marker_color="#3498db"))
-    fig.add_trace(go.Bar(name="Gastos",x=lm,y=_ms_ga,marker_color="#e67e22"))
+    fig.add_trace(go.Bar(name="Servicios",x=_lm,y=_ms_si,marker_color="#2ecc71"))
+    fig.add_trace(go.Bar(name="Alliance",x=_lm,y=_ms_al,marker_color="#27ae60"))
+    fig.add_trace(go.Bar(name="Compras",x=_lm,y=_ms_co,marker_color="#3498db"))
+    fig.add_trace(go.Bar(name="Gastos",x=_lm,y=_ms_ga,marker_color="#e67e22"))
     fig.add_trace(go.Scatter(
-        name="Resultado", x=lm, y=_ms_res,
+        name="Resultado", x=_lm, y=_ms_res,
         mode="lines+markers",
         line=dict(color="#8e44ad", width=3),
         marker=dict(size=8, color=["#27ae60" if v>=0 else "#e74c3c" for v in _ms_res],
