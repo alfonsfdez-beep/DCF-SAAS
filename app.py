@@ -302,11 +302,13 @@ if vista == "Dashboard":
     def s(df): return df["BASE_IMPONIBLE"].sum() if not df.empty and "BASE_IMPONIBLE" in df.columns else 0
     tc=s(fc); tg=s(fg); tsi=s(fsi); tal=s(fal)
     ti=tsi+tal
-    # Variación de existencias acumulada ene→mes actual del año seleccionado
-    _ve_anual = var_existencias.get(int(anio_sel), [0.0]*12)
+    # Personal y variación de existencias acumulados ene→mes actual
     _mes_hasta = hoy.month if int(anio_sel)==hoy.year else 12
+    _ve_anual = var_existencias.get(int(anio_sel), [0.0]*12)
+    _gp_anual  = gastos_personal.get(int(anio_sel), [0.0]*12)
     tve = sum(_ve_anual[:_mes_hasta])
-    tga = tc + tg - tve   # var existencias positiva reduce coste neto
+    tp  = sum(_gp_anual[:_mes_hasta])
+    tga = tc + tg + tp - tve
     res = ti - tga
 
     kpi_row([
