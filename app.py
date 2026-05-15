@@ -388,8 +388,8 @@ elif vista == "P&G":
     personal_m   = [personal_anual[m - 1] for m in MESES_C]
     varexist_m   = [varexist_anual[m - 1] for m in MESES_C]
 
-    ingresos_m    = [s + a + v for s, a, v in zip(servicios_m, alliance_m, varexist_m)]
-    total_gasto_m = [c + g + p for c, g, p in zip(compras_m, gastos_m, personal_m)]
+    ingresos_m    = [s + a for s, a in zip(servicios_m, alliance_m)]
+    total_gasto_m = [c + v + g + p for c, v, g, p in zip(compras_m, varexist_m, gastos_m, personal_m)]
     resultado_m   = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
 
     # ── KPIs resumen ──────────────────────────────────────────────────────────
@@ -414,19 +414,19 @@ elif vista == "P&G":
                 "TOTAL": fmt(total)}
 
     filas = [
-        build_row("Servicios",            servicios_m),
-        build_row("Alliance",             alliance_m),
-        build_row("Var. Existencias",     varexist_m),
-        build_row("TOTAL INGRESOS",       ingresos_m),
-        build_row("Compras",              compras_m),
-        build_row("Gastos",               gastos_m),
-        build_row("Personal",             personal_m),
-        build_row("TOTAL GASTOS",         total_gasto_m),
-        build_row("RESULTADO",            resultado_m),
+        build_row("Servicios",        servicios_m),
+        build_row("Alliance",         alliance_m),
+        build_row("TOTAL INGRESOS",   ingresos_m),
+        build_row("Compras",          compras_m),
+        build_row("Var. Existencias", varexist_m),
+        build_row("Gastos",           gastos_m),
+        build_row("Personal",         personal_m),
+        build_row("TOTAL GASTOS",     total_gasto_m),
+        build_row("RESULTADO",        resultado_m),
     ]
 
     df_pg = pd.DataFrame(filas).set_index("Concepto")
-    totales_rows = ["TOTAL INGRESOS", "TOTAL GASTOS", "RESULTADO", "Var. Existencias"]
+    totales_rows = ["TOTAL INGRESOS", "TOTAL GASTOS", "RESULTADO"]
 
     def color_resultado(val):
         try:
@@ -440,7 +440,7 @@ elif vista == "P&G":
                   .set_properties(**{"text-align": "right", "font-size": "0.85rem"})
                   .set_properties(subset=pd.IndexSlice[totales_rows, :],
                                   **{"font-weight": "bold", "background-color": "#f8f9fa"}))
-    _color_rows = ["RESULTADO", "Var. Existencias"]
+    _color_rows = ["RESULTADO", "Var. Existencias", "TOTAL INGRESOS", "TOTAL GASTOS"]
     try:
         styled = base_style.map(color_resultado, subset=pd.IndexSlice[_color_rows, :])
     except AttributeError:
