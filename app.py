@@ -402,8 +402,9 @@ elif vista == "P&G":
 
     # ── KPIs resumen ──────────────────────────────────────────────────────────
     ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
-    tga = tc + tg + sum(personal_m); res = ti - tga
     tp = sum(personal_m); tve = sum(varexist_m)
+    tga = tc + tg + tp - tve   # var existencias positiva reduce coste neto
+    res = ti - tga
     kpi_row([
         ("💰 Ingresos Totales", fmtk(ti)),
         ("🛒 Compras",          fmtk(tc)),
