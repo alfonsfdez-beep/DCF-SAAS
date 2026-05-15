@@ -180,7 +180,8 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_option_menu import option_menu
 from data_loader import (load_compras, load_gastos, load_ingresos_servicios,
-                         load_ingresos_alliance, load_banco, load_gastos_personal)
+                         load_ingresos_alliance, load_banco, load_gastos_personal,
+                         load_variacion_existencias)
 
 
 @st.cache_data(ttl=300)
@@ -192,9 +193,10 @@ def get_all_data():
     raw_b = load_banco()
     df_b, saldo = raw_b if isinstance(raw_b, tuple) else (raw_b, 0.0)
     personal = load_gastos_personal()
-    return df_c, df_g, df_si, df_al, df_b, saldo, personal
+    var_exist = load_variacion_existencias()
+    return df_c, df_g, df_si, df_al, df_b, saldo, personal, var_exist
 
-df_compras, df_gastos, df_servicios, df_alliance, df_banco, saldo_banco, gastos_personal = get_all_data()
+df_compras, df_gastos, df_servicios, df_alliance, df_banco, saldo_banco, gastos_personal, var_existencias = get_all_data()
 
 st.markdown(CSS, unsafe_allow_html=True)
 
@@ -376,22 +378,24 @@ elif vista == "P&G":
         return [float(df_a[df_a["MES"] == m]["BASE_IMPONIBLE"].sum()) if "MES" in df_a.columns else 0.0
                 for m in MESES_C]
 
-    personal_anual = gastos_personal.get(int(anio_sel), [0.0] * 12)
+    personal_anual  = gastos_personal.get(int(anio_sel), [0.0] * 12)
+    varexist_anual  = var_existencias.get(int(anio_sel), [0.0] * 12)
 
-    servicios_m = mes_serie(df_servicios)
-    alliance_m  = mes_serie(df_alliance)
-    compras_m   = mes_serie(df_compras)
-    gastos_m    = mes_serie(df_gastos)
-    personal_m  = [personal_anual[m - 1] for m in MESES_C]
+    servicios_m  = mes_serie(df_servicios)
+    alliance_m   = mes_serie(df_alliance)
+    compras_m    = mes_serie(df_compras)
+    gastos_m     = mes_serie(df_gastos)
+    personal_m   = [personal_anual[m - 1] for m in MESES_C]
+    varexist_m   = [varexist_anual[m - 1] for m in MESES_C]
 
-    ingresos_m    = [s + a for s, a in zip(servicios_m, alliance_m)]
+    ingresos_m    = [s + a + v for s, a, v in zip(servicios_m, alliance_m, varexist_m)]
     total_gasto_m = [c + g + p for c, g, p in zip(compras_m, gastos_m, personal_m)]
     resultado_m   = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
 
     # ── KPIs resumen ──────────────────────────────────────────────────────────
     ti = sum(ingresos_m); tc = sum(compras_m); tg = sum(gastos_m)
     tga = tc + tg + sum(personal_m); res = ti - tga
-    tp = sum(personal_m)
+    tp = sum(personal_m); tve = sum(varexist_m)
     kpi_row([
         ("💰 Ingresos Totales", fmtk(ti)),
         ("🛒 Compras",          fmtk(tc)),
@@ -410,18 +414,19 @@ elif vista == "P&G":
                 "TOTAL": fmt(total)}
 
     filas = [
-        build_row("Servicios",       servicios_m),
-        build_row("Alliance",        alliance_m),
-        build_row("TOTAL INGRESOS",  ingresos_m),
-        build_row("Compras",         compras_m),
-        build_row("Gastos",          gastos_m),
-        build_row("Personal",        personal_m),
-        build_row("TOTAL GASTOS",    total_gasto_m),
-        build_row("RESULTADO",       resultado_m),
+        build_row("Servicios",            servicios_m),
+        build_row("Alliance",             alliance_m),
+        build_row("Var. Existencias",     varexist_m),
+        build_row("TOTAL INGRESOS",       ingresos_m),
+        build_row("Compras",              compras_m),
+        build_row("Gastos",               gastos_m),
+        build_row("Personal",             personal_m),
+        build_row("TOTAL GASTOS",         total_gasto_m),
+        build_row("RESULTADO",            resultado_m),
     ]
 
     df_pg = pd.DataFrame(filas).set_index("Concepto")
-    totales_rows = ["TOTAL INGRESOS", "TOTAL GASTOS", "RESULTADO"]
+    totales_rows = ["TOTAL INGRESOS", "TOTAL GASTOS", "RESULTADO", "Var. Existencias"]
 
     def color_resultado(val):
         try:
@@ -435,10 +440,11 @@ elif vista == "P&G":
                   .set_properties(**{"text-align": "right", "font-size": "0.85rem"})
                   .set_properties(subset=pd.IndexSlice[totales_rows, :],
                                   **{"font-weight": "bold", "background-color": "#f8f9fa"}))
+    _color_rows = ["RESULTADO", "Var. Existencias"]
     try:
-        styled = base_style.map(color_resultado, subset=pd.IndexSlice[["RESULTADO"], :])
+        styled = base_style.map(color_resultado, subset=pd.IndexSlice[_color_rows, :])
     except AttributeError:
-        styled = base_style.applymap(color_resultado, subset=pd.IndexSlice[["RESULTADO"], :])
+        styled = base_style.applymap(color_resultado, subset=pd.IndexSlice[_color_rows, :])
 
     # Tabla con selección de fila para drill-down
     DRILLABLE = {"Servicios", "Alliance", "Compras", "Gastos"}

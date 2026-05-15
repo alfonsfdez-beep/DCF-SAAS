@@ -161,6 +161,29 @@ def load_gastos_personal():
         print(f"Error GASTOS PERSONAL: {e}")
         return {}
 
+def load_variacion_existencias():
+    """Devuelve {año: [m1..m12]} con la variación de existencias mensual.
+    La hoja tiene: col A = fecha (último día del mes), col B = importe."""
+    gc = get_client()
+    ss = gc.open_by_key(SHEET2_ID)
+    try:
+        raw = ss.worksheet("Variacion de existencias").get_all_values()
+        result = {}
+        for row in raw[1:]:
+            if len(row) < 2: continue
+            fecha = safe_date(row[0])
+            if pd.isna(fecha): continue
+            importe = safe_float(row[1])
+            year = fecha.year
+            month = fecha.month
+            if year not in result:
+                result[year] = [0.0] * 12
+            result[year][month - 1] = importe
+        return result
+    except Exception as e:
+        print(f"Error Variacion de existencias: {e}")
+        return {}
+
 def load_banco():
     gc = get_client()
     ss = gc.open_by_key(SHEET2_ID)
