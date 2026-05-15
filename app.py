@@ -22,6 +22,7 @@ _KPI_ICONS = {
     "cobros pendientes":      "arrow-down-circle-fill",
     "pagos pendientes":       "arrow-up-circle-fill",
     "saldo estimado 60d":     "graph-up",
+    "var. existencias":       "box-seam",
     "total cobros filtrados": "arrow-down-circle",
     "total pagos filtrados":  "arrow-up-circle",
     "neto filtrado":          "calculator",
@@ -300,12 +301,18 @@ if vista == "Dashboard":
     fsi=filtrar(df_servicios); fal=filtrar(df_alliance)
     def s(df): return df["BASE_IMPONIBLE"].sum() if not df.empty and "BASE_IMPONIBLE" in df.columns else 0
     tc=s(fc); tg=s(fg); tsi=s(fsi); tal=s(fal)
-    ti=tsi+tal; tga=tc+tg; res=ti-tga
+    ti=tsi+tal; tga=tc+tg
+    # Variación de existencias acumulada ene→mes actual del año seleccionado
+    _ve_anual = var_existencias.get(int(anio_sel), [0.0]*12)
+    _mes_hasta = hoy.month if int(anio_sel)==hoy.year else 12
+    tve = sum(_ve_anual[:_mes_hasta])
+    res=ti-tga+tve   # var existencias reduce coste neto
 
     kpi_row([
-        ("💰 Ingresos Totales", fmtk(ti),  fmtk(res) if res != 0 else None),
+        ("💰 Ingresos Totales", fmtk(ti)),
         ("🛒 Compras",          fmtk(tc)),
         ("📋 Gastos",           fmtk(tg)),
+        ("Var. Existencias",    fmtk(tve)),
         ("📈 Resultado",        fmtk(res), fmtk(res) if res != 0 else None),
     ])
     kpi_row([
