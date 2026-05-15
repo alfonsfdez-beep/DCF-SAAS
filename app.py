@@ -389,7 +389,7 @@ elif vista == "P&G":
     varexist_m   = [varexist_anual[m - 1] for m in MESES_C]
 
     ingresos_m    = [s + a for s, a in zip(servicios_m, alliance_m)]
-    total_gasto_m = [c + v + g + p for c, v, g, p in zip(compras_m, varexist_m, gastos_m, personal_m)]
+    total_gasto_m = [c - v + g + p for c, v, g, p in zip(compras_m, varexist_m, gastos_m, personal_m)]
     resultado_m   = [i - g for i, g in zip(ingresos_m, total_gasto_m)]
 
     # ── KPIs resumen ──────────────────────────────────────────────────────────
