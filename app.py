@@ -23,6 +23,7 @@ _KPI_ICONS = {
     "pagos pendientes":       "arrow-up-circle-fill",
     "saldo estimado 60d":     "graph-up",
     "var. existencias":       "box-seam",
+    "margen bruto alliance":  "percent",
     "total cobros filtrados": "arrow-down-circle",
     "total pagos filtrados":  "arrow-up-circle",
     "neto filtrado":          "calculator",
@@ -310,6 +311,10 @@ if vista == "Dashboard":
     tp  = sum(_gp_anual[:_mes_hasta])
     tga = tc + tg + tp - tve
     res = ti - tga
+    # Margen bruto Alliance = (Alliance - Compras + Var.Exist) / Alliance
+    _margen_abs = tal - tc + tve
+    _margen_pct = (_margen_abs / tal * 100) if tal > 0 else 0
+    _margen_str = f"{_margen_pct:,.1f} %".replace(".", "X").replace(",", ".").replace("X", ",")
 
     kpi_row([
         ("💰 Ingresos Totales", fmtk(ti)),
@@ -319,10 +324,11 @@ if vista == "Dashboard":
         ("📈 Resultado",        fmtk(res), fmtk(res) if res != 0 else None),
     ])
     kpi_row([
-        ("Ingresos Servicios", fmtk(tsi)),
-        ("Ingresos Alliance",  fmtk(tal)),
-        ("Total Gastos",       fmtk(tga)),
-        ("🏦 Saldo Banco",     fmtk(saldo_banco)),
+        ("Ingresos Servicios",   fmtk(tsi)),
+        ("Ingresos Alliance",    fmtk(tal)),
+        ("Margen Bruto Alliance",_margen_str),
+        ("Total Gastos",         fmtk(tga)),
+        ("🏦 Saldo Banco",       fmtk(saldo_banco)),
     ])
 
     st.markdown("---")
