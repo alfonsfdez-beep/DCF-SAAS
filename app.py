@@ -153,7 +153,7 @@ if not st.session_state.get("authenticated"):
         if os.path.exists(LOGO_PATH):
             _, img_c, _ = st.columns([1, 2, 1])
             with img_c:
-                st.image(LOGO_PATH, use_column_width=True)
+                st.image(LOGO_PATH, use_container_width=True)
         else:
             st.markdown("## 💊 DCFarma")
         st.markdown(
